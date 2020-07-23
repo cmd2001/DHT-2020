@@ -11,7 +11,9 @@ DHT Project of PPCA 2020
 
 - [x] find_successor, closest_preceding_node, create, join, stabilize, notify, fix_fingers, check_predecessor
 
-- [ ] Resource Lock
+- [x] Resource Lock
+
+- [ ] RPC Calling
 
 - [ ] Test Interface
 
