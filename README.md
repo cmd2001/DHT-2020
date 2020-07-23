@@ -13,7 +13,9 @@ DHT Project of PPCA 2020
 
 - [x] Resource Lock
 
-- [ ] RPC Calling
+- [x] RPC Calling
+
+- [ ] Force Quit
 
 - [ ] Test Interface
 

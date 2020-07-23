@@ -31,8 +31,7 @@ type Node struct {
 	fixing int
 	lock   sync.Mutex
 
-	sto    Storage
-	stoPre Storage
+	sto Storage
 
 	Ip string
 	id big.Int
@@ -250,7 +249,35 @@ func (pos *Node) InsertKeyVal(key string, val string) error {
 func (pos *Node) CreateNetwork() error { // todo:: initialize fingers
 	pos.lock.Lock()
 	pos.suc = Edge{pos.Ip, pos.id}
+	for i := 0; i < Len; i++ {
+		pos.finger[i] = Edge{pos.Ip, pos.id}
+	}
 	pos.lock.Unlock()
+	return nil
+}
+
+func (pos *Node) MoveDataToPre(pr big.Int, ret *map[string]string) error {
+	pos.sto.lock.Lock()
+	for k, v := range pos.sto.data {
+		if hashStr(k).Cmp(&pr) <= 0 {
+			(*ret)[k] = v
+		}
+	}
+	for k := range *ret {
+		delete(pos.sto.data, k)
+	}
+	pos.sto.lock.Unlock()
+	return nil
+}
+
+func (pos *Node) MoveDataFromPre(dat map[string]string, _ *int) error {
+	pos.sto.lock.Lock()
+
+	for k, v := range dat {
+		pos.sto.data[k] = v
+	}
+
+	pos.sto.lock.Unlock()
 	return nil
 }
 
@@ -264,14 +291,30 @@ func (pos *Node) JoinNetwork(ip string) error { // todo:: initialize fingers
 	}
 
 	var ret Edge
+	// fmt.Print("to call\n")
 	err := client.Call("Node.FindSuccessor", pos.id, &ret)
+	// fmt.Print(err)
 	if err != nil {
+		_ = client.Close()
 		pos.lock.Unlock()
 		fmt.Print("Error(2):: RPC Calling Failure.")
 		return errors.New("error(2):: RPC Calling Failure")
 	}
 
 	pos.suc = ret
+
+	pos.sto.lock.Lock()
+	err = client.Call("Node.MoveDataFromPre", pos.id, pos.sto.data)
+	pos.sto.lock.Lock()
+	if err != nil {
+		_ = client.Close()
+		pos.lock.Unlock()
+		fmt.Print("Error(2):: RPC Calling Failure.")
+		return errors.New("error(2):: RPC Calling Failure")
+	}
+
+	_ = client.Close()
+
 	pos.lock.Unlock()
 	return nil
 }
@@ -403,5 +446,23 @@ func (pos *Node) CheckPredecessor() error {
 }
 
 func (pos *Node) Quit() error {
+	pos.lock.Lock()
+	client := Dial(pos.suc.ip)
+	pos.lock.Unlock()
+
+	if client == nil {
+		fmt.Print("Error(1):: Dial Connect Failure.")
+		return errors.New("error(1):: Dial Connect Failure")
+	}
+
+	pos.sto.lock.Lock()
+	err := client.Call("Node.MoveDataFromPre", pos.sto.data, nil)
+	pos.sto.lock.Unlock()
+	_ = client.Close()
+	if err != nil {
+		fmt.Print("Error(1):: Dial Connect Failure.")
+		return errors.New("error(1):: Dial Connect Failure")
+	}
+
 	return nil
 }

@@ -14,6 +14,7 @@ import (
 
 func NewNode(port int) dhtNode {
 	var ret DHTNode
+	ret.Data = new(chord.Node)
 	ret.Data.Init(":" + strconv.Itoa(port))
 	ret.Server = rpc.NewServer()
 	err := ret.Server.Register(ret.Data)
@@ -92,5 +93,3 @@ func (pos *DHTNode) Get(key string) (bool, string) {
 func (pos *DHTNode) Delete(key string) bool {
 	return pos.Data.EraseKey(key) == nil
 }
-
-// Todo: implement a struct which implements the interface "dhtNode".
