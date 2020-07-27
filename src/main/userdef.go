@@ -14,8 +14,9 @@ import (
 
 func NewNode(port int) dhtNode {
 	var ret DHTNode
-	ret.Data = new(chord.Node)
-	ret.Data.Init(":" + strconv.Itoa(port))
+	ret.Data = new(chord.RPCNode)
+	ret.Data.Data = new(chord.Node)
+	ret.Data.Data.Init(":" + strconv.Itoa(port))
 	ret.Server = rpc.NewServer()
 	err := ret.Server.Register(ret.Data)
 
@@ -28,37 +29,37 @@ func NewNode(port int) dhtNode {
 }
 
 type DHTNode struct {
-	Data   *chord.Node
+	Data   *chord.RPCNode
 	Server *rpc.Server
 }
 
 func (pos *DHTNode) Run() {
-	listen, err := net.Listen("tcp", pos.Data.Ip)
+	listen, err := net.Listen("tcp", pos.Data.Data.Ip)
 	if err != nil {
 		fmt.Println("Error(4):: Failed to Listen.", err)
 		return
 	}
 
 	pos.Data.Listen = listen
-	pos.Data.On = true
+	pos.Data.Data.On = true
 
 	go pos.Server.Accept(listen)
 }
 
 func (pos *DHTNode) Create() {
-	_ = pos.Data.CreateNetwork()
+	_ = pos.Data.Data.CreateNetwork()
 }
 
 func (pos *DHTNode) Join(ip string) {
-	_ = pos.Data.JoinNetwork(ip)
+	_ = pos.Data.Data.JoinNetwork(ip)
 }
 
 func (pos *DHTNode) Quit() {
-	if pos.Data.On == false {
+	if pos.Data.Data.On == false {
 		return
 	}
-	pos.Data.On = false
-	_ = pos.Data.Quit()
+	pos.Data.Data.On = false
+	_ = pos.Data.Data.Quit()
 	err := pos.Data.Listen.Close()
 	if err != nil {
 		fmt.Println("Error(4):: Failed to Close Listen.", err)
@@ -66,10 +67,10 @@ func (pos *DHTNode) Quit() {
 }
 
 func (pos *DHTNode) ForceQuit() {
-	if pos.Data.On == false {
+	if pos.Data.Data.On == false {
 		return
 	}
-	pos.Data.On = false
+	pos.Data.Data.On = false
 	err := pos.Data.Listen.Close()
 	if err != nil {
 		fmt.Println("Error(4):: Failed to Close Listen.", err)
@@ -81,15 +82,15 @@ func (pos *DHTNode) Ping(addr string) bool {
 }
 
 func (pos *DHTNode) Put(key string, value string) bool {
-	return pos.Data.InsertKeyVal(key, value) == nil
+	return pos.Data.Data.InsertKeyVal(key, value) == nil
 }
 
 func (pos *DHTNode) Get(key string) (bool, string) {
 	var ret string
-	err := pos.Data.QueryVal(key, &ret)
+	err := pos.Data.Data.QueryVal(key, &ret)
 	return err == nil, ret
 }
 
 func (pos *DHTNode) Delete(key string) bool {
-	return pos.Data.EraseKey(key) == nil
+	return pos.Data.Data.EraseKey(key) == nil
 }

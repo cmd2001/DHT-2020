@@ -59,14 +59,18 @@ func powTwo(p int64) *big.Int {
 
 func inRange(l *big.Int, r *big.Int, x *big.Int) bool {
 	var rr big.Int
-	if l.Cmp(r) > 0 {
-		rr = *rr.Add(r, mod)
+	if l.Cmp(r) >= 0 {
+		rr.Add(r, mod)
+	} else {
+		rr = *r
 	}
-	if l.Cmp(x) < 0 && x.Cmp(&rr) < 0 {
+
+	if l.Cmp(x) < 0 && x.Cmp(&rr) <= 0 {
 		return true
 	}
 	var adder big.Int
-	if l.Cmp(adder.Add(x, mod)) < 0 && adder.Add(x, mod).Cmp(r) < 0 {
+	adder.Add(x, mod)
+	if l.Cmp(&adder) < 0 && adder.Cmp(&rr) <= 0 {
 		return true
 	}
 	return false
