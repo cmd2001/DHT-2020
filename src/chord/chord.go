@@ -106,7 +106,7 @@ func (pos *Node) FindSuccessor(h *big.Int, ret *Edge) error {
 		return errors.New("error(1):: Dial Connect Failure")
 	}
 
-	err = client.Call("RPCNode.FindSuccessor", &h, ret)
+	err = client.Call("RPCNode.FindSuccessor", h, ret)
 	_ = client.Close()
 
 	if err != nil {
@@ -140,7 +140,7 @@ func (pos *Node) QueryVal(key string, ret *string) error {
 	var temp Edge
 
 	err := pos.FindSuccessor(hashStr(key), &temp) // fail when findNode returns node which does not store key.
-	fmt.Print(err)
+	// fmt.Print(err)
 	if err != nil {
 		fmt.Print("Error(3):: Unable to Find Node for Query\n")
 		return errors.New("error(3):: Unable to Find Node for Query")
@@ -240,7 +240,7 @@ func (pos *Node) InsertKeyVal(key string, val string) error {
 	return nil
 }
 
-func (pos *Node) CreateNetwork() error { // todo:: initialize fingers
+func (pos *Node) CreateNetwork() error {
 	pos.lock.Lock()
 	pos.suc = Edge{pos.Ip, pos.id}
 	for i := 0; i < Len; i++ {
@@ -295,22 +295,27 @@ func (pos *Node) JoinNetwork(ip string) error { // todo:: initialize fingers
 	}
 
 	pos.suc = ret
-	pos.finger[0] = pos.suc
+	pos.lock.Unlock()
+
+	for i := 0; i < 160; i++ {
+		var t big.Int
+		t.Add(&pos.id, powTwo(int64(i)))
+		t.Mod(&t, mod)
+		_ = pos.FindSuccessor(&t, &pos.finger[i])
+	}
 
 	pos.sto.lock.Lock()
 	err = client.Call("RPCNode.MoveDataToPre", &pos.id, &pos.sto.data)
-
 	pos.sto.lock.Unlock()
+
 	if err != nil {
 		_ = client.Close()
-		pos.lock.Unlock()
 		fmt.Print("Error(2):: RPC Calling Failure.\n")
 		return errors.New("error(2):: RPC Calling Failure")
 	}
 
 	_ = client.Close()
 
-	pos.lock.Unlock()
 	return nil
 }
 
