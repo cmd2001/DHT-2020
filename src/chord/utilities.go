@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	tryTime = 5
+	tryTime  = 5
+	waitTime = time.Millisecond * 50
 )
 
 var (
@@ -30,7 +31,8 @@ func Dial(ip string) *rpc.Client {
 	for i := 1; i <= tryTime; i++ {
 		client, err = rpc.Dial("tcp", ip)
 		if err != nil {
-			time.Sleep(Second / 2)
+			client.Close()
+			time.Sleep(waitTime)
 		} else {
 			return client
 		}
@@ -44,7 +46,7 @@ func Ping(ip string) error {
 	for i := 1; i <= tryTime; i++ {
 		client, err = rpc.Dial("tcp", ip)
 		if err != nil {
-			time.Sleep(Second / 2)
+			time.Sleep(waitTime)
 		} else {
 			client.Close()
 			return nil

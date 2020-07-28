@@ -8,10 +8,6 @@ import (
 	"strconv"
 )
 
-/* In this file, you should implement function "NewNode" and
- * a struct which implements the interface "dhtNode".
- */
-
 func NewNode(port int) dhtNode {
 	var ret DHTNode
 	ret.Data = new(chord.RPCNode)
@@ -44,6 +40,7 @@ func (pos *DHTNode) Run() {
 	pos.Data.Data.On = true
 
 	go pos.Server.Accept(listen)
+	// go pos.Data.Data.Maintain()
 }
 
 func (pos *DHTNode) Create() {

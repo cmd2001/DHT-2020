@@ -47,10 +47,22 @@ func (pos *RPCNode) GetPredecessor(_ *int, ret *Edge) error {
 	return pos.Data.GetPredecessor(nil, ret)
 }
 
-func (pos *RPCNode) Notify(x Edge, _ *int) error {
-	return pos.Data.Notify(x, nil)
+func (pos *RPCNode) Notify(x *Edge, _ *int) error {
+	return pos.Data.Notify(*x, nil)
 }
 
 func (pos *RPCNode) MoveDataToPre(pr *big.Int, ret *map[string]string) error {
 	return pos.Data.MoveDataToPre(pr, ret)
+}
+
+func (pos *RPCNode) InsertSuc(newSuc *Edge, _ *int) error {
+	pos.Data.insertSuc(*newSuc)
+	return nil
+}
+
+func (pos *RPCNode) UpdatePrv(newPre *Edge, _ *int) error {
+	pos.Data.lock.Lock()
+	pos.Data.pre = *newPre
+	pos.Data.lock.Unlock()
+	return nil
 }

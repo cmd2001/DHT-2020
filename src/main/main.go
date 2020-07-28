@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"runtime"
+	"time"
 )
 
 func randStr() string {
@@ -45,9 +47,12 @@ func randStr() string {
 	}
 } */
 
-const nodeLen = 200
+const nodeLen = 2
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU()) // use all CPUs
+	rand.Seed(time.Now().UnixNano())
+
 	fmt.Print("This is Main\n")
 	var nodes [nodeLen]dhtNode
 	for i := 0; i < nodeLen; i++ {
@@ -61,8 +66,10 @@ func main() {
 	}
 	fmt.Print("ALL Joined")
 
-	for i := 0; i < 10000; i++ {
+	mp := make(map[int]string)
+	for i := 0; i < 1000; i++ {
 		str := randStr()
+		mp[rand.Int()%255] = str
 
 		var id int
 
@@ -72,6 +79,7 @@ func main() {
 		id = rand.Int() % nodeLen
 		ok, val := nodes[id].Get(str)
 		if !ok || val != str {
+			fmt.Print("i = ", i, "\n")
 			panic("Wrong Answer!")
 		}
 		// fmt.Print("Test Passed: ", str, "\n")
@@ -80,4 +88,48 @@ func main() {
 		}
 	}
 
+	/* fmt.Print("Waiting for maintain")
+	time.Sleep(time.Second * 15) */
+
+	/* for i := 0; i < nodeLen / 10; i++ {
+		id := rand.Int() % nodeLen
+		nodes[id].Quit()
+	} */
+
+	/* nodes[0].Quit()
+	fmt.Print("NODE0 QUITED\n") */
+
+	for _, str := range mp {
+		id := rand.Int() % nodeLen
+		for id == 0 {
+			id = rand.Int() % nodeLen
+		}
+
+		ok, val := nodes[id].Get(str)
+		if !ok || val != str {
+			panic("Wrong Answer!")
+		}
+	}
+
+	for _, str := range mp {
+		id := rand.Int() % nodeLen
+		for id == 0 {
+			id = rand.Int() % nodeLen
+		}
+
+		ok := nodes[id].Delete(str)
+		if !ok {
+			panic("Failed to Delete!")
+		}
+
+		id = rand.Int() % nodeLen
+		for id == 0 {
+			id = rand.Int() % nodeLen
+		}
+
+		ok, _ = nodes[id].Get(str)
+		if ok {
+			panic("Deleted Value can be Found!")
+		}
+	}
 }
