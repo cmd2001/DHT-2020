@@ -11,7 +11,7 @@ import (
 const (
 	Len            = 160
 	SucListLen     = 10
-	maintainPeriod = 1 * time.Second
+	maintainPeriod = time.Second / 2
 )
 
 type Edge struct {
@@ -53,17 +53,27 @@ func (pos *Node) GetID(_ *int, ret *big.Int) error {
 
 func (pos *Node) ClosestPrecedingNode(id *big.Int) Edge {
 	pos.lock.Lock()
+	var blocked map[string]bool
+	blocked = make(map[string]bool)
+
 	for i := Len - 1; i >= 0; i-- {
+		if _, err := blocked[pos.finger[i].Ip]; err {
+			pos.finger[i] = Edge{pos.Ip, pos.id}
+			continue
+		}
 		if inRange(&pos.id, id, &pos.finger[i].Id) {
 			ret := pos.finger[i]
 			if Ping(ret.Ip) == nil {
 				pos.lock.Unlock()
 				return ret
+			} else {
+				blocked[pos.finger[i].Ip] = true
+				pos.finger[i] = Edge{pos.Ip, pos.id}
 			}
 		}
 	}
 	pos.lock.Unlock()
-	return Edge{pos.Ip, pos.id}
+	return Edge{"", *new(big.Int)}
 }
 
 // return node ip for a query key.
@@ -94,7 +104,11 @@ func (pos *Node) FindSuccessor(h *big.Int, ret *Edge) error {
 	}
 
 	nxt := pos.ClosestPrecedingNode(h)
-	if nxt.Ip == pos.Ip { // failed
+	if nxt.Ip == "" && inRange(&pos.id, h, &sucID) { // chain query
+		nxt = pos.sucList[0]
+	}
+
+	if nxt.Ip == "" { // failed
 		fmt.Print("Error(3):: Unable to Find Successor\n")
 		return errors.New("error(3):: Unable to Find Successor")
 	}
@@ -135,9 +149,7 @@ func (pos *Node) QueryInside(key string, ret *string) error {
 
 func (pos *Node) QueryVal(key string, ret *string) error {
 	var temp Edge
-
 	err := pos.FindSuccessor(hashStr(key), &temp) // fail when findNode returns node which does not store key.
-	// fmt.Print(err)
 	if err != nil {
 		fmt.Print("Error(3):: Unable to Find Node for Query\n")
 		return errors.New("error(3):: Unable to Find Node for Query")
@@ -207,6 +219,7 @@ func (pos *Node) EraseKey(key string) error {
 
 func (pos *Node) InsertInside(kv KeyValue, _ *int) error {
 	pos.sto.lock.Lock()
+	// fmt.Print("value inserted at", pos.Ip, "\n")
 	pos.sto.data[kv.Key] = kv.Val
 	pos.sto.lock.Unlock()
 	return nil
@@ -330,18 +343,13 @@ func (pos *Node) GetPredecessor(_ *int, ret *Edge) error {
 }
 
 func (pos *Node) Notify(x Edge, _ *int) error {
-	// fmt.Print("in Notify pos = ", pos.Ip, " pre = ", x.Ip, "\n")
 	if pos.pre.Ip == "" {
 		pos.lock.Lock()
 		pos.pre = x
 		pos.lock.Unlock()
 	} else {
-		if pos.FixList() != nil {
-			fmt.Print("Error(5):: All Successor has Failed.\n")
-			return errors.New("error(5):: All Successor has Failed")
-		}
 		pos.lock.Lock()
-		client := Dial(pos.sucList[0].Ip)
+		client := Dial(pos.pre.Ip)
 		pos.lock.Unlock()
 
 		if client == nil {
@@ -349,16 +357,18 @@ func (pos *Node) Notify(x Edge, _ *int) error {
 			return errors.New("error(1):: Dial Connect Failure")
 		}
 
-		var sucID big.Int
-		err := client.Call("RPCNode.GetID", 0, &sucID)
+		var preID big.Int
+		err := client.Call("RPCNode.GetID", 0, &preID)
 		_ = client.Close()
 		if err != nil {
 			fmt.Print("Error(2):: RPC Calling Failure.\n")
 			return errors.New("error(2):: RPC Calling Failure")
 		}
 
-		if inRange(&pos.id, &sucID, &x.Id) {
-			pos.insertSuc(x)
+		if inRange(&preID, &pos.id, &x.Id) {
+			pos.lock.Lock()
+			pos.pre = x
+			pos.lock.Unlock()
 		}
 
 	}
@@ -455,7 +465,7 @@ func (pos *Node) CheckPredecessor() error {
 func (pos *Node) Maintain() {
 	for pos.On {
 		if pos.inited {
-			fmt.Print("ip = ", pos.Ip, " Called Maintain\n")
+			// fmt.Print("ip = ", pos.Ip, " Called Maintain\n")
 			pos.CheckPredecessor()
 			pos.Stabilize()
 		}
@@ -496,24 +506,12 @@ func (pos *Node) insertSuc(newSuc Edge) {
 }
 
 func (pos *Node) Quit() error {
-	var temp Edge
-	pos.FindSuccessor(&pos.id, &temp)
-	pos.insertSuc(temp)
-	/* fmt.Print(temp.Ip, "\nsucList = ")
-	for i := 0; i < SucListLen; i++ {
-		fmt.Print(pos.sucList[i].Ip, " ")
-	}
-	fmt.Print("\nfinger = ")
-	for i := 0; i < SucListLen; i++ {
-		fmt.Print(pos.finger[i].Ip, " ")
-	}
-	fmt.Print("\n")
-	panic("") */
-
 	if pos.FixList() != nil {
 		fmt.Print("Error(5):: All Successor has Failed.\n")
 		return errors.New("error(5):: All Successor has Failed")
 	}
+
+	fmt.Print(pos.sucList[0].Ip, "\n")
 
 	if pos.sucList[0].Ip == pos.Ip { // self-ring
 		return nil
@@ -533,6 +531,7 @@ func (pos *Node) Quit() error {
 	err := client.Call("RPCNode.MoveDataFromPre", &pos.sto.data, nil)
 	_ = client.Close()
 	pos.sto.lock.Unlock()
+
 	if err != nil {
 		fmt.Print("Error(2):: RPC Calling Failure.\n")
 		return errors.New("error(2):: RPC Calling Failure")
@@ -541,6 +540,7 @@ func (pos *Node) Quit() error {
 	if pos.pre.Ip != "" {
 		// notify pre
 		client = Dial(pos.pre.Ip)
+		fmt.Print(pos.pre.Ip, "\n")
 		if client == nil {
 			fmt.Print("Error(1):: Dial Connect Failure.\n")
 			return errors.New("error(1):: Dial Connect Failure")
@@ -569,7 +569,6 @@ func (pos *Node) Quit() error {
 			return errors.New("error(2):: RPC Calling Failure")
 		}
 	}
-
 	pos.inited = false
 	return nil
 }

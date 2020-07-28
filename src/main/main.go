@@ -47,7 +47,7 @@ func randStr() string {
 	}
 } */
 
-const nodeLen = 2
+const nodeLen = 50
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // use all CPUs
@@ -63,8 +63,9 @@ func main() {
 	for i := 1; i < nodeLen; i++ {
 		fmt.Print("Joining Node ", i, "\n")
 		nodes[i].Join(":2333")
+		time.Sleep(time.Second * 1)
 	}
-	fmt.Print("ALL Joined")
+	fmt.Print("ALL Joined\n")
 
 	mp := make(map[int]string)
 	for i := 0; i < 1000; i++ {
@@ -79,25 +80,15 @@ func main() {
 		id = rand.Int() % nodeLen
 		ok, val := nodes[id].Get(str)
 		if !ok || val != str {
-			fmt.Print("i = ", i, "\n")
 			panic("Wrong Answer!")
 		}
-		// fmt.Print("Test Passed: ", str, "\n")
 		if i%100 == 0 {
 			fmt.Print("Tests Passed: ", i, "\n")
 		}
 	}
 
-	/* fmt.Print("Waiting for maintain")
-	time.Sleep(time.Second * 15) */
-
-	/* for i := 0; i < nodeLen / 10; i++ {
-		id := rand.Int() % nodeLen
-		nodes[id].Quit()
-	} */
-
-	/* nodes[0].Quit()
-	fmt.Print("NODE0 QUITED\n") */
+	nodes[0].Quit()
+	fmt.Print("NODE0 QUITED\n")
 
 	for _, str := range mp {
 		id := rand.Int() % nodeLen
@@ -132,4 +123,5 @@ func main() {
 			panic("Deleted Value can be Found!")
 		}
 	}
+
 }
