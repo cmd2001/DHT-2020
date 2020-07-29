@@ -351,9 +351,7 @@ func (pos *Node) JoinNetwork(ip string) error {
 		return errors.New("error(2):: RPC Calling Failure")
 	}
 
-	pos.lock.Lock()
-	pos.sucList[0] = ret
-	pos.lock.Unlock()
+	pos.insertSuc(ret)
 	for i := 0; i < 160; i++ {
 		var t big.Int
 		t.Add(&pos.id, powTwo(int64(i)))
@@ -537,12 +535,69 @@ func (pos *Node) FixFingers() error {
 
 func (pos *Node) CheckPredecessor() error {
 	pos.lock.Lock()
-	if pos.pre.Ip != "" && Ping(pos.pre.Ip) != nil {
-		// for force quit
+	pip := pos.pre.Ip
+	pos.lock.Unlock()
+
+	if pip != "" && Ping(pip) != nil {
 		pos.MergeDataPre()
+
+		fmt.Print("FORCEQUIT DETECTED Pos = ", pos.Ip, " Pre = ", pos.pre.Ip, "Suc = ", pos.sucList[0].Ip, "\n")
+
+		if pos.FixList() != nil {
+			fmt.Print("Error(5):: All Successor has Failed.\n")
+			return errors.New("error(5):: All Successor has Failed")
+		}
+		pos.lock.Lock()
+		client := Dial(pos.sucList[0].Ip)
+		pos.lock.Unlock()
+
+		if client == nil {
+			fmt.Print("Error(1):: Dial Connect Failure.\n")
+			return errors.New("error(1):: Dial Connect Failure")
+		}
+
+		pos.sto.lock.Lock()
+		err := client.Call("RPCNode.FillDataPre", pos.sto.data, nil)
+		_ = client.Close()
+		pos.sto.lock.Unlock()
+
+		if err != nil {
+			fmt.Print("Error(2):: RPC Calling Failure.\n")
+			return errors.New("error(2):: RPC Calling Failure")
+		}
+		fmt.Print("Fixed")
+
 		pos.pre.Ip = ""
 	}
+
+	return nil
+}
+
+func (pos *Node) MaintainSuccessorList() error {
+	// fmt.Print(pos.Ip, "Called\n")
+	pos.lock.Lock()
+	pip := pos.pre.Ip
 	pos.lock.Unlock()
+	if pip != "" && pip != pos.Ip {
+		client := Dial(pip)
+		if client == nil {
+			fmt.Print("Error(1):: Dial Connect Failure.\n")
+			return errors.New("error(1):: Dial Connect Failure")
+		}
+		// fmt.Print("Pos = ", pos.Ip, " Pre = ", pip, "\n")
+
+		pos.lock.Lock()
+		err := client.Call("RPCNode.CopySuccessorList", &pos.sucList, nil)
+		_ = client.Close()
+		pos.lock.Unlock()
+
+		if err != nil {
+			fmt.Print("Error(2):: RPC Calling Failure.\n")
+			return errors.New("error(2):: RPC Calling Failure")
+		}
+
+	}
+	// fmt.Print(pos.Ip, "Finished\n")
 	return nil
 }
 
@@ -551,6 +606,7 @@ func (pos *Node) Maintain() {
 		if pos.inited {
 			_ = pos.CheckPredecessor()
 			_ = pos.Stabilize()
+			_ = pos.MaintainSuccessorList()
 		}
 		time.Sleep(maintainPeriod)
 	}
@@ -585,12 +641,11 @@ func (pos *Node) FixList() error {
 
 func (pos *Node) insertSuc(newSuc Edge) {
 	pos.lock.Lock()
-	for i := 0; i < SucListLen; i++ {
-		if newSuc.Ip == pos.sucList[i].Ip {
-			pos.lock.Unlock()
-			return
-		}
+	if newSuc.Ip == pos.sucList[0].Ip {
+		pos.lock.Unlock()
+		return
 	}
+	fmt.Print("pos = ", pos.Ip, " suc = ", newSuc.Ip, "\n")
 	for i := SucListLen - 1; i > 0; i-- {
 		pos.sucList[i] = pos.sucList[i-1]
 	}
@@ -679,6 +734,15 @@ func (pos *Node) Quit() error {
 }
 
 // for force quit
+
+func (pos *Node) CopySuccessorList(sucList *[SucListLen]Edge) {
+	pos.lock.Lock()
+	for i := 1; i < SucListLen; i++ {
+		pos.sucList[i] = sucList[i-1]
+	}
+	pos.lock.Unlock()
+}
+
 func (pos *Node) InsertDataPre(kv KeyValue) {
 	pos.dataPre.lock.Lock()
 	pos.dataPre.data[kv.Key] = kv.Val
@@ -707,4 +771,8 @@ func (pos *Node) FillDataPre(mp map[string]string) {
 	pos.dataPre.lock.Lock()
 	pos.dataPre.data = mp
 	pos.dataPre.lock.Unlock()
+}
+
+func (pos *Node) ForceQuit() {
+	// fmt.Print("Pos = ", pos.Ip, " Suc = ", pos.sucList[0].Ip, " Pre = ", pos.pre.Ip)
 }

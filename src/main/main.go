@@ -17,9 +17,9 @@ func randStr() string {
 }
 
 const (
-	testGroup  = 5
-	nodeLen    = 100
-	quitSize   = 10
+	testGroup  = 3
+	nodeLen    = 20
+	quitSize   = 2
 	insertSize = 2000
 	randomSize = 512
 	sleepTime  = time.Second * 6 / 10
@@ -27,7 +27,10 @@ const (
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // use all CPUs
-	rand.Seed(time.Now().UnixNano())
+	// seed := time.Now().UnixNano()
+	seed := int64(1596009712209948538)
+	fmt.Print("Random Seed = ", seed, "\n")
+	rand.Seed(seed)
 
 	fmt.Print("This is Main\n")
 
@@ -44,10 +47,10 @@ func main() {
 		nodes[i].Join(":2333")
 		time.Sleep(sleepTime)
 	}
-	fmt.Print("ALL Joined\n")
+	fmt.Print("ALL Nodes Joined\n")
 
-	for T := 0; T <= testGroup; T++ {
-		fmt.Print("Conducting Test Group: ", T, "\n")
+	for T := 0; T < testGroup; T++ {
+		fmt.Print("Conducting Test Group: ", T+1, "\n")
 		mp := make(map[int]string)
 
 		fmt.Print("Conducting Insertion Test\n")
@@ -86,7 +89,8 @@ func main() {
 			}
 
 			fmt.Print("Quiting Node ", id, "\n")
-			nodes[id].Quit()
+			// nodes[id].Quit()
+			nodes[id].ForceQuit()
 			deleted[id] = id
 			time.Sleep(sleepTime)
 		}
@@ -101,6 +105,7 @@ func main() {
 			}
 			ok, val := nodes[id].Get(str)
 			if !ok || val != str {
+				fmt.Print("ok = ", ok, "val = ", val)
 				panic("Wrong Answer!")
 			}
 		}

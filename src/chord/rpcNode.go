@@ -90,3 +90,8 @@ func (pos *RPCNode) FillDataPre(mp map[string]string, _ *int) error {
 	pos.Data.FillDataPre(mp)
 	return nil
 }
+
+func (pos *RPCNode) CopySuccessorList(sucList *[SucListLen]Edge, _ *int) error {
+	pos.Data.CopySuccessorList(sucList)
+	return nil
+}

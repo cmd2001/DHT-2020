@@ -3,7 +3,6 @@ package chord
 import (
 	"crypto/sha1"
 	"errors"
-	"fmt"
 	"math/big"
 	"net/rpc"
 	"time"
@@ -32,8 +31,6 @@ func Dial(ip string) *rpc.Client {
 	for i := 1; i <= tryTime; i++ {
 		client, err = rpc.Dial("tcp", ip)
 		if err != nil {
-			err2 := client.Close()
-			fmt.Print(err2, "\n")
 			time.Sleep(waitTime)
 		} else {
 			return client
