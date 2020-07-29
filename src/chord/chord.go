@@ -88,7 +88,7 @@ func (pos *Node) FindSuccessor(h *big.Int, ret *Edge) error {
 	pos.lock.Unlock()
 
 	if client == nil {
-		fmt.Print("Error(1):: Dial Connect Failure.\n")
+		fmt.Print("Error(1):: Dial Connect Failure.(91)\n")
 		return errors.New("error(1):: Dial Connect Failure")
 	}
 	var sucID big.Int
@@ -116,7 +116,7 @@ func (pos *Node) FindSuccessor(h *big.Int, ret *Edge) error {
 
 	client = Dial(nxt.Ip)
 	if client == nil {
-		fmt.Print("Error(1):: Dial Connect Failure.\n")
+		fmt.Print("Error(1):: Dial Connect Failure.(119)\n")
 		return errors.New("error(1):: Dial Connect Failure")
 	}
 
@@ -159,7 +159,7 @@ func (pos *Node) QueryVal(key string, ret *string) error {
 	ip := temp.Ip
 	client := Dial(ip)
 	if client == nil {
-		fmt.Print("Error(1):: Dial Connect Failure.\n")
+		fmt.Print("Error(1):: Dial Connect Failure.(162)\n")
 		return errors.New("error(1):: Dial Connect Failure")
 	}
 
@@ -202,7 +202,7 @@ func (pos *Node) EraseInside(key string, _ *int) error {
 	pos.lock.Unlock()
 
 	if client == nil {
-		fmt.Print("Error(1):: Dial Connect Failure.\n")
+		fmt.Print("Error(1):: Dial Connect Failure.(205)\n")
 		return errors.New("error(1):: Dial Connect Failure")
 	}
 
@@ -227,7 +227,7 @@ func (pos *Node) EraseKey(key string) error {
 	ip := temp.Ip
 	client := Dial(ip)
 	if client == nil {
-		fmt.Print("Error(1):: Dial Connect Failure.\n")
+		fmt.Print("Error(1):: Dial Connect Failure.(230)\n")
 		return errors.New("error(1):: Dial Connect Failure")
 	}
 	err = client.Call("RPCNode.EraseInside", key, nil)
@@ -256,7 +256,7 @@ func (pos *Node) InsertInside(kv KeyValue, _ *int) error {
 	pos.lock.Unlock()
 
 	if client == nil {
-		fmt.Print("Error(1):: Dial Connect Failure.\n")
+		fmt.Print("Error(1):: Dial Connect Failure.(259)\n")
 		return errors.New("error(1):: Dial Connect Failure")
 	}
 
@@ -281,7 +281,7 @@ func (pos *Node) InsertKeyVal(key string, val string) error {
 	ip := temp.Ip
 	client := Dial(ip)
 	if client == nil {
-		fmt.Print("Error(1):: Dial Connect Failure.\n")
+		fmt.Print("Error(1):: Dial Connect Failure.(284)\n")
 		return errors.New("error(1):: Dial Connect Failure")
 	}
 	err = client.Call("RPCNode.InsertInside", KeyValue{key, val}, nil)
@@ -338,7 +338,7 @@ func (pos *Node) JoinNetwork(ip string) error {
 	pos.lock.Unlock()
 
 	if client == nil {
-		fmt.Print("Error(1):: Dial Connect Failure.\n")
+		fmt.Print("Error(1):: Dial Connect Failure.(341)\n")
 		return errors.New("error(1):: Dial Connect Failure")
 	}
 
@@ -394,7 +394,7 @@ func (pos *Node) Notify(x Edge, _ *int) error {
 		// for force quit
 		client := Dial(x.Ip)
 		if client == nil {
-			fmt.Print("Error(1):: Dial Connect Failure.\n")
+			fmt.Print("Error(1):: Dial Connect Failure.(397)\n")
 			return errors.New("error(1):: Dial Connect Failure")
 		}
 
@@ -415,7 +415,7 @@ func (pos *Node) Notify(x Edge, _ *int) error {
 		pos.lock.Unlock()
 
 		if client == nil {
-			fmt.Print("Error(1):: Dial Connect Failure.\n")
+			fmt.Print("Error(1):: Dial Connect Failure.(418)\n")
 			return errors.New("error(1):: Dial Connect Failure")
 		}
 
@@ -435,7 +435,7 @@ func (pos *Node) Notify(x Edge, _ *int) error {
 			// for force quit
 			client := Dial(x.Ip)
 			if client == nil {
-				fmt.Print("Error(1):: Dial Connect Failure.\n")
+				fmt.Print("Error(1):: Dial Connect Failure.(438)\n")
 				return errors.New("error(1):: Dial Connect Failure")
 			}
 
@@ -466,18 +466,18 @@ func (pos *Node) Stabilize() error {
 	pos.lock.Unlock()
 
 	if client == nil {
-		fmt.Print("Error(1):: Dial Connect Failure.\n")
+		fmt.Print("Error(1):: Dial Connect Failure.(469)\n")
 		return errors.New("error(1):: Dial Connect Failure")
 	}
 
 	var ret Edge
 	err := client.Call("RPCNode.GetPredecessor", 0, &ret)
 	if err != nil {
-		fmt.Print("Error(1):: Dial Connect Failure.\n")
+		fmt.Print("Error(1):: Dial Connect Failure.(476)\n")
 		return errors.New("error(1):: Dial Connect Failure")
 	}
 
-	if ret.Ip == "" { // nil pre
+	if Ping(ret.Ip) != nil { // nil pre
 		return nil
 	}
 
@@ -499,7 +499,7 @@ func (pos *Node) Stabilize() error {
 	pos.lock.Unlock()
 
 	if client == nil {
-		fmt.Print("Error(1):: Dial Connect Failure.\n")
+		fmt.Print("Error(1):: Dial Connect Failure.(502)\n")
 		return errors.New("error(1):: Dial Connect Failure")
 	}
 
@@ -552,7 +552,7 @@ func (pos *Node) CheckPredecessor() error {
 		pos.lock.Unlock()
 
 		if client == nil {
-			fmt.Print("Error(1):: Dial Connect Failure.\n")
+			fmt.Print("Error(1):: Dial Connect Failure.(555)\n")
 			return errors.New("error(1):: Dial Connect Failure")
 		}
 
@@ -581,7 +581,7 @@ func (pos *Node) MaintainSuccessorList() error {
 	if pip != "" && pip != pos.Ip {
 		client := Dial(pip)
 		if client == nil {
-			fmt.Print("Error(1):: Dial Connect Failure.\n")
+			fmt.Print("Error(1):: Dial Connect Failure.(584)\n")
 			return errors.New("error(1):: Dial Connect Failure")
 		}
 		// fmt.Print("Pos = ", pos.Ip, " Pre = ", pip, "\n")
@@ -670,7 +670,7 @@ func (pos *Node) Quit() error {
 	pos.lock.Unlock()
 
 	if client == nil {
-		fmt.Print("Error(1):: Dial Connect Failure.\n")
+		fmt.Print("Error(1):: Dial Connect Failure.(673)\n")
 		return errors.New("error(1):: Dial Connect Failure")
 	}
 
@@ -700,7 +700,7 @@ func (pos *Node) Quit() error {
 		client = Dial(pos.pre.Ip)
 		fmt.Print(pos.pre.Ip, "\n")
 		if client == nil {
-			fmt.Print("Error(1):: Dial Connect Failure.\n")
+			fmt.Print("Error(1):: Dial Connect Failure.(703)\n")
 			return errors.New("error(1):: Dial Connect Failure")
 		}
 		pos.lock.Lock()
@@ -717,7 +717,7 @@ func (pos *Node) Quit() error {
 		// notify suc
 		client = Dial(pos.sucList[0].Ip)
 		if client == nil {
-			fmt.Print("Error(1):: Dial Connect Failure.\n")
+			fmt.Print("Error(1):: Dial Connect Failure.(720)\n")
 			return errors.New("error(1):: Dial Connect Failure")
 		}
 		pos.lock.Lock()
