@@ -31,7 +31,8 @@ type Node struct {
 	fixing  int
 	lock    sync.Mutex
 
-	sto Storage
+	sto     Storage
+	dataPre Storage
 
 	Ip     string
 	id     big.Int
@@ -190,6 +191,28 @@ func (pos *Node) EraseInside(key string, _ *int) error {
 	}
 	delete(pos.sto.data, key)
 	pos.sto.lock.Unlock()
+
+	// for force quit
+	if pos.FixList() != nil {
+		fmt.Print("Error(5):: All Successor has Failed.\n")
+		return errors.New("error(5):: All Successor has Failed")
+	}
+	pos.lock.Lock()
+	client := Dial(pos.sucList[0].Ip)
+	pos.lock.Unlock()
+
+	if client == nil {
+		fmt.Print("Error(1):: Dial Connect Failure.\n")
+		return errors.New("error(1):: Dial Connect Failure")
+	}
+
+	err := client.Call("RPCNode.RemoveDataPre", key, nil)
+	_ = client.Close()
+	if err != nil {
+		fmt.Print("Error(2):: RPC Calling Failure.\n")
+		return errors.New("error(2):: RPC Calling Failure")
+	}
+
 	return nil
 }
 
@@ -222,6 +245,28 @@ func (pos *Node) InsertInside(kv KeyValue, _ *int) error {
 	// fmt.Print("value inserted at", pos.Ip, "\n")
 	pos.sto.data[kv.Key] = kv.Val
 	pos.sto.lock.Unlock()
+
+	// for force quit
+	if pos.FixList() != nil {
+		fmt.Print("Error(5):: All Successor has Failed.\n")
+		return errors.New("error(5):: All Successor has Failed")
+	}
+	pos.lock.Lock()
+	client := Dial(pos.sucList[0].Ip)
+	pos.lock.Unlock()
+
+	if client == nil {
+		fmt.Print("Error(1):: Dial Connect Failure.\n")
+		return errors.New("error(1):: Dial Connect Failure")
+	}
+
+	err := client.Call("RPCNode.InsertDataPre", kv, nil)
+	_ = client.Close()
+	if err != nil {
+		fmt.Print("Error(2):: RPC Calling Failure.\n")
+		return errors.New("error(2):: RPC Calling Failure")
+	}
+
 	return nil
 }
 
@@ -347,6 +392,25 @@ func (pos *Node) Notify(x Edge, _ *int) error {
 		pos.lock.Lock()
 		pos.pre = x
 		pos.lock.Unlock()
+
+		// for force quit
+		client := Dial(x.Ip)
+		if client == nil {
+			fmt.Print("Error(1):: Dial Connect Failure.\n")
+			return errors.New("error(1):: Dial Connect Failure")
+		}
+
+		var temp map[string]string
+		err := client.Call("RPCNode.GetData", 0, &temp)
+		_ = client.Close()
+
+		if err != nil {
+			fmt.Print("Error(2):: RPC Calling Failure.\n")
+			return errors.New("error(2):: RPC Calling Failure")
+		}
+
+		pos.FillDataPre(temp)
+
 	} else {
 		pos.lock.Lock()
 		client := Dial(pos.pre.Ip)
@@ -369,6 +433,24 @@ func (pos *Node) Notify(x Edge, _ *int) error {
 			pos.lock.Lock()
 			pos.pre = x
 			pos.lock.Unlock()
+
+			// for force quit
+			client := Dial(x.Ip)
+			if client == nil {
+				fmt.Print("Error(1):: Dial Connect Failure.\n")
+				return errors.New("error(1):: Dial Connect Failure")
+			}
+
+			var temp map[string]string
+			err := client.Call("RPCNode.GetData", 0, &temp)
+			_ = client.Close()
+
+			if err != nil {
+				fmt.Print("Error(2):: RPC Calling Failure.\n")
+				return errors.New("error(2):: RPC Calling Failure")
+			}
+
+			pos.FillDataPre(temp)
 		}
 
 	}
@@ -456,6 +538,8 @@ func (pos *Node) FixFingers() error {
 func (pos *Node) CheckPredecessor() error {
 	pos.lock.Lock()
 	if pos.pre.Ip != "" && Ping(pos.pre.Ip) != nil {
+		// for force quit
+		pos.MergeDataPre()
 		pos.pre.Ip = ""
 	}
 	pos.lock.Unlock()
@@ -465,9 +549,8 @@ func (pos *Node) CheckPredecessor() error {
 func (pos *Node) Maintain() {
 	for pos.On {
 		if pos.inited {
-			// fmt.Print("ip = ", pos.Ip, " Called Maintain\n")
-			pos.CheckPredecessor()
-			pos.Stabilize()
+			_ = pos.CheckPredecessor()
+			_ = pos.Stabilize()
 		}
 		time.Sleep(maintainPeriod)
 	}
@@ -529,8 +612,18 @@ func (pos *Node) Quit() error {
 	// move data
 	pos.sto.lock.Lock()
 	err := client.Call("RPCNode.MoveDataFromPre", &pos.sto.data, nil)
-	_ = client.Close()
 	pos.sto.lock.Unlock()
+
+	if err != nil {
+		fmt.Print("Error(2):: RPC Calling Failure.\n")
+		return errors.New("error(2):: RPC Calling Failure")
+	}
+
+	// for force quit
+	pos.dataPre.lock.Lock()
+	err = client.Call("RPCNode.FillDataPre", pos.dataPre.data, nil)
+	_ = client.Close()
+	pos.dataPre.lock.Unlock()
 
 	if err != nil {
 		fmt.Print("Error(2):: RPC Calling Failure.\n")
@@ -571,4 +664,35 @@ func (pos *Node) Quit() error {
 	}
 	pos.inited = false
 	return nil
+}
+
+// for forceQuit
+func (pos *Node) InsertDataPre(kv KeyValue) {
+	pos.dataPre.lock.Lock()
+	pos.dataPre.data[kv.Key] = kv.Val
+	pos.dataPre.lock.Unlock()
+}
+
+func (pos *Node) RemoveDataPre(key string) {
+	pos.dataPre.lock.Lock()
+	if _, err := pos.dataPre.data[key]; !err {
+		delete(pos.dataPre.data, key)
+	}
+	pos.dataPre.lock.Unlock()
+}
+
+func (pos *Node) MergeDataPre() {
+	pos.dataPre.lock.Lock()
+	pos.sto.lock.Lock()
+	for key, value := range pos.dataPre.data {
+		pos.sto.data[key] = value
+	}
+	pos.dataPre.lock.Unlock()
+	pos.sto.lock.Unlock()
+}
+
+func (pos *Node) FillDataPre(mp map[string]string) {
+	pos.dataPre.lock.Lock()
+	pos.dataPre.data = mp
+	pos.dataPre.lock.Unlock()
 }

@@ -19,7 +19,7 @@ GetID, FindSuccessor, QueryInside, EraseInside, InsertInside, MoveDataFromPre, G
 */
 
 func (pos *RPCNode) GetID(_ *int, ret *big.Int) error {
-	pos.Data.GetID(nil, ret)
+	_ = pos.Data.GetID(nil, ret)
 	return nil
 }
 
@@ -64,5 +64,29 @@ func (pos *RPCNode) UpdatePrv(newPre *Edge, _ *int) error {
 	pos.Data.lock.Lock()
 	pos.Data.pre = *newPre
 	pos.Data.lock.Unlock()
+	return nil
+}
+
+// for forcequit
+
+func (pos *RPCNode) InsertDataPre(kv KeyValue, _ *int) error {
+	pos.Data.InsertDataPre(kv)
+	return nil
+}
+
+func (pos *RPCNode) RemoveDataPre(key string, _ *int) error {
+	pos.Data.RemoveDataPre(key)
+	return nil
+}
+
+func (pos *RPCNode) GetData(_ int, ret *map[string]string) error {
+	pos.Data.sto.lock.Lock()
+	*ret = pos.Data.sto.data
+	pos.Data.sto.lock.Unlock()
+	return nil
+}
+
+func (pos *RPCNode) FillDataPre(mp map[string]string, _ *int) error {
+	pos.Data.FillDataPre(mp)
 	return nil
 }
