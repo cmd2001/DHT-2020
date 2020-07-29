@@ -63,7 +63,7 @@ func main() {
 	for i := 1; i < nodeLen; i++ {
 		fmt.Print("Joining Node ", i, "\n")
 		nodes[i].Join(":2333")
-		time.Sleep(time.Second * 1)
+		time.Sleep(time.Second * 11 / 10)
 	}
 	fmt.Print("ALL Joined\n")
 
@@ -87,12 +87,22 @@ func main() {
 		}
 	}
 
-	nodes[0].Quit()
-	fmt.Print("NODE0 QUITED\n")
+	deleted := make(map[int]int)
+
+	for i := 0; i < 10; i++ {
+		id := rand.Int() % nodeLen
+		for _, err := deleted[id]; err; _, err = deleted[id] {
+			id = rand.Int() % nodeLen
+		}
+		fmt.Print("Quiting Node ", id, "\n")
+		nodes[id].Quit()
+		deleted[id] = id
+		time.Sleep(time.Second * 11 / 10)
+	}
 
 	for _, str := range mp {
 		id := rand.Int() % nodeLen
-		for id == 0 {
+		for _, err := deleted[id]; !err; _, err = deleted[id] {
 			id = rand.Int() % nodeLen
 		}
 
@@ -104,7 +114,7 @@ func main() {
 
 	for _, str := range mp {
 		id := rand.Int() % nodeLen
-		for id == 0 {
+		for _, err := deleted[id]; !err; _, err = deleted[id] {
 			id = rand.Int() % nodeLen
 		}
 
@@ -114,7 +124,7 @@ func main() {
 		}
 
 		id = rand.Int() % nodeLen
-		for id == 0 {
+		for _, err := deleted[id]; !err; _, err = deleted[id] {
 			id = rand.Int() % nodeLen
 		}
 
