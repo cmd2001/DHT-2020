@@ -567,7 +567,11 @@ func (pos *Node) FixList() error {
 	}
 	if p == -1 {
 		pos.lock.Unlock()
-		fmt.Print("Error(5):: All Successor has Failed.\n")
+		fmt.Print("Pos = ", pos.Ip, " sucList = ")
+		for i := 0; i < SucListLen; i++ {
+			fmt.Print(pos.sucList[i].Ip, " ")
+		}
+		fmt.Print("\n")
 		return errors.New("error(5):: All Successor has Failed")
 	}
 	for i := 0; p < SucListLen; {
@@ -581,6 +585,12 @@ func (pos *Node) FixList() error {
 
 func (pos *Node) insertSuc(newSuc Edge) {
 	pos.lock.Lock()
+	for i := 0; i < SucListLen; i++ {
+		if newSuc.Ip == pos.sucList[i].Ip {
+			pos.lock.Unlock()
+			return
+		}
+	}
 	for i := SucListLen - 1; i > 0; i-- {
 		pos.sucList[i] = pos.sucList[i-1]
 	}
@@ -594,7 +604,7 @@ func (pos *Node) Quit() error {
 		return errors.New("error(5):: All Successor has Failed")
 	}
 
-	fmt.Print(pos.sucList[0].Ip, "\n")
+	// fmt.Print(pos.sucList[0].Ip, "\n")
 
 	if pos.sucList[0].Ip == pos.Ip { // self-ring
 		return nil
@@ -639,6 +649,8 @@ func (pos *Node) Quit() error {
 			return errors.New("error(1):: Dial Connect Failure")
 		}
 		pos.lock.Lock()
+		fmt.Print("pos = ", pos.Ip, " pos.pre = ", pos.pre.Ip, "\n")
+		fmt.Print("new SUc = ", pos.sucList[0].Ip, "\n")
 		err = client.Call("RPCNode.InsertSuc", &pos.sucList[0], nil)
 		_ = client.Close()
 		pos.lock.Unlock()
@@ -666,7 +678,7 @@ func (pos *Node) Quit() error {
 	return nil
 }
 
-// for forceQuit
+// for force quit
 func (pos *Node) InsertDataPre(kv KeyValue) {
 	pos.dataPre.lock.Lock()
 	pos.dataPre.data[kv.Key] = kv.Val
@@ -675,7 +687,7 @@ func (pos *Node) InsertDataPre(kv KeyValue) {
 
 func (pos *Node) RemoveDataPre(key string) {
 	pos.dataPre.lock.Lock()
-	if _, err := pos.dataPre.data[key]; !err {
+	if _, ok := pos.dataPre.data[key]; ok {
 		delete(pos.dataPre.data, key)
 	}
 	pos.dataPre.lock.Unlock()
