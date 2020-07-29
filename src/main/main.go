@@ -17,9 +17,10 @@ func randStr() string {
 }
 
 const (
+	testGroup  = 5
 	nodeLen    = 100
-	quitSize   = 20
-	testSize   = 2000
+	quitSize   = 10
+	insertSize = 2000
 	randomSize = 512
 	sleepTime  = time.Second * 6 / 10
 )
@@ -29,7 +30,10 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 
 	fmt.Print("This is Main\n")
+
 	var nodes [nodeLen]dhtNode
+	deleted := make(map[int]int)
+
 	for i := 0; i < nodeLen; i++ {
 		nodes[i] = NewNode(2333 + i)
 		nodes[i].Run()
@@ -42,77 +46,89 @@ func main() {
 	}
 	fmt.Print("ALL Joined\n")
 
-	mp := make(map[int]string)
-	for i := 0; i < testSize; i++ {
-		str := randStr()
-		mp[rand.Int()%randomSize] = str
+	for T := 0; T <= testGroup; T++ {
+		fmt.Print("Conducting Test Group: ", T, "\n")
+		mp := make(map[int]string)
 
-		var id int
+		fmt.Print("Conducting Insertion Test\n")
+		for i := 0; i < insertSize; i++ {
+			str := randStr()
+			mp[rand.Int()%randomSize] = str
 
-		id = rand.Int() % nodeLen
-		nodes[id].Put(str, str)
+			id := rand.Int() % nodeLen
+			for _, ok := deleted[id]; ok; {
+				id = rand.Int() % nodeLen
+				_, ok = deleted[id]
+			}
 
-		id = rand.Int() % nodeLen
-		ok, val := nodes[id].Get(str)
-		if !ok || val != str {
-			panic("Wrong Answer!")
+			nodes[id].Put(str, str)
+
+			id = rand.Int() % nodeLen
+			for _, ok := deleted[id]; ok; {
+				id = rand.Int() % nodeLen
+				_, ok = deleted[id]
+			}
+
+			ok, val := nodes[id].Get(str)
+			if !ok || val != str {
+				panic("Wrong Answer!")
+			}
+			if (i+1)%100 == 0 {
+				fmt.Print("Insertion Tests Passed: ", i+1, "\n")
+			}
 		}
-		if i%100 == 0 {
-			fmt.Print("Tests Passed: ", i, "\n")
+
+		for i := 0; i < quitSize; i++ {
+			id := rand.Int() % nodeLen
+			for _, ok := deleted[id]; ok; {
+				id = rand.Int() % nodeLen
+				_, ok = deleted[id]
+			}
+
+			fmt.Print("Quiting Node ", id, "\n")
+			nodes[id].Quit()
+			deleted[id] = id
+			time.Sleep(sleepTime)
+		}
+
+		fmt.Print("Conducting Random Get Test\n")
+
+		for _, str := range mp {
+			id := rand.Int() % nodeLen
+			for _, ok := deleted[id]; ok; {
+				id = rand.Int() % nodeLen
+				_, ok = deleted[id]
+			}
+			ok, val := nodes[id].Get(str)
+			if !ok || val != str {
+				panic("Wrong Answer!")
+			}
+		}
+
+		fmt.Print("Conducting Random Erase Test\n")
+
+		for _, str := range mp {
+			id := rand.Int() % nodeLen
+			for _, ok := deleted[id]; ok; {
+				id = rand.Int() % nodeLen
+				_, ok = deleted[id]
+			}
+			ok := nodes[id].Delete(str)
+			if !ok {
+				panic("Failed to Delete!")
+			}
+
+			id = rand.Int() % nodeLen
+			for _, ok := deleted[id]; ok; {
+				id = rand.Int() % nodeLen
+				_, ok = deleted[id]
+			}
+
+			ok, _ = nodes[id].Get(str)
+			if ok {
+				panic("Deleted Value can be Found!")
+			}
 		}
 	}
-
-	deleted := make(map[int]int)
-
-	for i := 0; i < quitSize; i++ {
-		id := rand.Int() % nodeLen
-		for _, ok := deleted[id]; ok; {
-			id = rand.Int() % nodeLen
-			_, ok = deleted[id]
-		}
-		fmt.Print("Quiting Node ", id, "\n")
-		nodes[id].Quit()
-		deleted[id] = id
-		time.Sleep(sleepTime)
-	}
-
-	fmt.Print("Conducting Random Get Test\n")
-
-	for _, str := range mp {
-		id := rand.Int() % nodeLen
-		for _, ok := deleted[id]; ok; {
-			id = rand.Int() % nodeLen
-			_, ok = deleted[id]
-		}
-		ok, val := nodes[id].Get(str)
-		if !ok || val != str {
-			panic("Wrong Answer!")
-		}
-	}
-
-	fmt.Print("Conducting Random Erase Test\n")
-
-	for _, str := range mp {
-		id := rand.Int() % nodeLen
-		for _, ok := deleted[id]; ok; {
-			id = rand.Int() % nodeLen
-			_, ok = deleted[id]
-		}
-		ok := nodes[id].Delete(str)
-		if !ok {
-			panic("Failed to Delete!")
-		}
-
-		id = rand.Int() % nodeLen
-		for _, ok := deleted[id]; ok; {
-			id = rand.Int() % nodeLen
-			_, ok = deleted[id]
-		}
-
-		ok, _ = nodes[id].Get(str)
-		if ok {
-			panic("Deleted Value can be Found!")
-		}
-	}
-
+	fmt.Print("Congratulations! ALL Pressure Tests Passed!")
 }
