@@ -732,8 +732,6 @@ func (pos *Node) Quit() error {
 			return errors.New("error(1):: Dial Connect Failure")
 		}
 		pos.lock.Lock()
-		fmt.Print("pos = ", pos.Ip, " pos.pre = ", pos.pre.Ip, "\n")
-		fmt.Print("new SUc = ", pos.sucList[0].Ip, "\n")
 		err = client.Call("RPCNode.InsertSuc", &pos.sucList[0], nil)
 		_ = client.Close()
 		pos.lock.Unlock()

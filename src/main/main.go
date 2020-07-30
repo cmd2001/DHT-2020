@@ -17,9 +17,9 @@ func randStr() string {
 }
 
 const (
-	testGroup  = 3
-	nodeLen    = 20
-	quitSize   = 2
+	testGroup  = 5
+	nodeLen    = 50
+	quitSize   = 5
 	insertSize = 2000
 	randomSize = 512
 	sleepTime  = time.Second * 6 / 10
@@ -87,9 +87,13 @@ func main() {
 				_, ok = deleted[id]
 			}
 
-			fmt.Print("Quiting Node ", id, "\n")
-			// nodes[id].Quit()
-			nodes[id].ForceQuit()
+			if rand.Int()%2 != 0 {
+				fmt.Print("Quiting Node ", id, "\n")
+				nodes[id].Quit()
+			} else {
+				fmt.Print("ForceQuiting Node ", id, "\n")
+				nodes[id].ForceQuit()
+			}
 			deleted[id] = id
 			time.Sleep(sleepTime * 5)
 		}
