@@ -242,7 +242,7 @@ func (pos *Node) EraseKey(key string) error {
 
 func (pos *Node) InsertInside(kv KeyValue, _ *int) error {
 	pos.sto.lock.Lock()
-	// fmt.Print("value inserted at", pos.Ip, "\n")
+
 	pos.sto.data[kv.Key] = kv.Val
 	pos.sto.lock.Unlock()
 
@@ -351,7 +351,7 @@ func (pos *Node) JoinNetwork(ip string) error {
 		return errors.New("error(2):: RPC Calling Failure")
 	}
 
-	pos.insertSuc(ret)
+	_ = pos.insertSuc(ret)
 	for i := 0; i < 160; i++ {
 		var t big.Int
 		t.Add(&pos.id, powTwo(int64(i)))
@@ -491,7 +491,7 @@ func (pos *Node) Stabilize() error {
 	}
 
 	if inRange(&pos.id, &sucID, &ret.Id) {
-		pos.insertSuc(ret)
+		_ = pos.insertSuc(ret)
 	}
 
 	pos.lock.Lock()
@@ -630,6 +630,25 @@ func (pos *Node) FixList() error {
 		fmt.Print("\n")
 		return errors.New("error(5):: All Successor has Failed")
 	}
+	// for force quit
+	if p != 0 {
+		fmt.Print("pos = ", pos.Ip, " FOUND Suc 0 FAILURE\n")
+		client := Dial(pos.sucList[p].Ip)
+		if client == nil {
+			fmt.Print("Error(1):: Dial Connect Failure.(637)\n")
+			return errors.New("error(1):: Dial Connect Failure")
+		}
+
+		pos.sto.lock.Lock()
+		err := client.Call("RPCNode.FillDataPre", pos.sto.data, nil)
+		_ = client.Close()
+		pos.sto.lock.Unlock()
+
+		if err != nil {
+			fmt.Print("Error(2):: RPC Calling Failure.\n")
+			return errors.New("error(2):: RPC Calling Failure")
+		}
+	}
 	for i := 0; p < SucListLen; {
 		pos.sucList[i] = pos.sucList[p]
 		i++
@@ -639,11 +658,11 @@ func (pos *Node) FixList() error {
 	return nil
 }
 
-func (pos *Node) insertSuc(newSuc Edge) {
+func (pos *Node) insertSuc(newSuc Edge) error {
 	pos.lock.Lock()
 	if newSuc.Ip == pos.sucList[0].Ip {
 		pos.lock.Unlock()
-		return
+		return nil
 	}
 	fmt.Print("pos = ", pos.Ip, " suc = ", newSuc.Ip, "\n")
 	for i := SucListLen - 1; i > 0; i-- {
@@ -651,6 +670,24 @@ func (pos *Node) insertSuc(newSuc Edge) {
 	}
 	pos.sucList[0] = newSuc
 	pos.lock.Unlock()
+
+	// for force quit
+	client := Dial(newSuc.Ip)
+	if client == nil {
+		fmt.Print("Error(1):: Dial Connect Failure.(637)\n")
+		return errors.New("error(1):: Dial Connect Failure")
+	}
+
+	pos.sto.lock.Lock()
+	err := client.Call("RPCNode.FillDataPre", pos.sto.data, nil)
+	_ = client.Close()
+	pos.sto.lock.Unlock()
+
+	if err != nil {
+		fmt.Print("Error(2):: RPC Calling Failure.\n")
+		return errors.New("error(2):: RPC Calling Failure")
+	}
+	return nil
 }
 
 func (pos *Node) Quit() error {
@@ -774,5 +811,5 @@ func (pos *Node) FillDataPre(mp map[string]string) {
 }
 
 func (pos *Node) ForceQuit() {
-	// fmt.Print("Pos = ", pos.Ip, " Suc = ", pos.sucList[0].Ip, " Pre = ", pos.pre.Ip)
+	fmt.Print("Pos = ", pos.Ip, " Suc = ", pos.sucList[0].Ip, " Pre = ", pos.pre.Ip)
 }
