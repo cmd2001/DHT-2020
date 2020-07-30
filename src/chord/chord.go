@@ -597,14 +597,6 @@ func (pos *Node) Maintain() {
 	for pos.On {
 		if pos.inited {
 			_ = pos.CheckPredecessor()
-			/* if pos.Ip == ":2341" {
-				fmt.Print(pos.Ip, " Called Maintain Suc = ", pos.sucList[0].Ip, "\n")
-				fmt.Print("SucList = ")
-				for i := 0; i < SucListLen; i++ {
-					fmt.Print(pos.sucList[i].Ip, " ")
-				}
-				fmt.Print("\n")
-			} */
 			_ = pos.Stabilize()
 			_ = pos.MaintainSuccessorList()
 		}
