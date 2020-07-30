@@ -68,7 +68,7 @@ func (pos *DHTNode) ForceQuit() {
 		return
 	}
 	pos.Data.Data.On = false
-	pos.Data.Data.ForceQuit()
+	// pos.Data.Data.PrintLink()
 	err := pos.Data.Listen.Close()
 	if err != nil {
 		fmt.Println("Error(4):: Failed to Close Listen.", err)

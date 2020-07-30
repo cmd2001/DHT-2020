@@ -27,8 +27,7 @@ const (
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // use all CPUs
-	// seed := time.Now().UnixNano()
-	seed := int64(1596009712209948538)
+	seed := time.Now().UnixNano()
 	fmt.Print("Random Seed = ", seed, "\n")
 	rand.Seed(seed)
 
@@ -92,7 +91,7 @@ func main() {
 			// nodes[id].Quit()
 			nodes[id].ForceQuit()
 			deleted[id] = id
-			time.Sleep(sleepTime)
+			time.Sleep(sleepTime * 5)
 		}
 
 		fmt.Print("Conducting Random Get Test\n")
@@ -105,7 +104,7 @@ func main() {
 			}
 			ok, val := nodes[id].Get(str)
 			if !ok || val != str {
-				fmt.Print("ok = ", ok, "val = ", val)
+				fmt.Print("ok = ", ok, " val = ", val, " str = ", str, "\n")
 				panic("Wrong Answer!")
 			}
 		}
