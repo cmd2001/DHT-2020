@@ -47,8 +47,8 @@ func (pos *DHTNode) Create() {
 	_ = pos.Data.Data.CreateNetwork()
 }
 
-func (pos *DHTNode) Join(ip string) {
-	_ = pos.Data.Data.JoinNetwork(ip)
+func (pos *DHTNode) Join(ip string) bool {
+	return pos.Data.Data.JoinNetwork(ip) == nil
 }
 
 func (pos *DHTNode) Quit() {
