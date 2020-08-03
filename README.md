@@ -15,11 +15,17 @@ DHT Project of PPCA 2020
 
 - [x] RPC Calling
 
-- [ ] Force Quit
+- [x] Force Quit
 
-- [ ] Test Interface
+- [x] Test Interface
 
-- [ ] Debug
+- [x] Debug
+
+- [x] Basic Test
+
+- [ ] Advanced Test
+
+- [ ] Second Protocol
 
 ## Errors Definition
 

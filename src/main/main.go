@@ -17,13 +17,23 @@ func randStr() string {
 }
 
 const (
-	testGroup  = 1
-	nodeLen    = 10
+	testGroup  = 5
+	nodeLen    = 50
 	quitSize   = 5
 	insertSize = 2000
 	randomSize = 512
 	sleepTime  = time.Second * 6 / 10
 )
+
+/*
+testGroup  = 5
+nodeLen    = 50
+quitSize   = 5
+insertSize = 2000
+randomSize = 512
+sleepTime  = time.Second * 6 / 10
+1596444521048967103
+*/
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // use all CPUs
