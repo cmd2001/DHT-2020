@@ -7,6 +7,13 @@ import (
 	"time"
 )
 
+const (
+	baseSleepTime   = time.Millisecond * 800
+	normalSleepTime = time.Millisecond * 500
+	dataSleepTime   = time.Millisecond * 5
+	dataSleepTime2  = time.Millisecond
+)
+
 func advancedTest() {
 	testWhenStabAndQuit(4)
 	testWhenStabAndQuit(2)
@@ -47,23 +54,23 @@ func testForceQuit(rate time.Duration) {
 	}
 
 	nodeGroup[0].Create()
-	time.Sleep(time.Millisecond * 200)
+	time.Sleep(baseSleepTime * 2)
 
 	for j := 1; j < maxNodeSize; j++ {
 		curport := config.Port
 		addr := toAddr(localIP, curport)
 
 		nodeGroup[j].Join(addr)
-		time.Sleep(time.Millisecond * 500)
+		time.Sleep(baseSleepTime * 2)
 	}
-	time.Sleep(time.Second * rate * 10)
+	time.Sleep(baseSleepTime)
 
 	for j := 0; j < maxDataSize; j++ {
 		k := randString(50)
 		v := randString(50)
 		datalocal[k] = v
 		nodeGroup[rand.Intn(int(maxNodeSize))].Put(k, v)
-		time.Sleep(time.Millisecond * 5)
+		time.Sleep(dataSleepTime)
 	}
 	print(len(datalocal))
 
@@ -77,9 +84,9 @@ func testForceQuit(rate time.Duration) {
 		for j := pos; j-pos < round; j++ {
 			// fmt.Println("quit", j)
 			nodeGroup[j].ForceQuit()
-			time.Sleep(time.Millisecond * 200)
+			time.Sleep(baseSleepTime * 2)
 		}
-		time.Sleep(time.Second * rate * 2)
+		time.Sleep(baseSleepTime)
 		pos += round
 
 		for tk, tv := range datalocal {
@@ -129,7 +136,7 @@ func testWhenStabAndQuit(rate time.Duration) {
 
 		go nodeGroup[i].Run()
 	}
-	time.Sleep(time.Millisecond * rate * 100)
+	time.Sleep(normalSleepTime * rate)
 
 	nodeGroup[0].Create()
 
@@ -142,17 +149,17 @@ func testWhenStabAndQuit(rate time.Duration) {
 		if !nodeGroup[i].Join(addr) {
 			failcnt++
 		}
-		time.Sleep(time.Millisecond * 100 * rate)
+		time.Sleep(normalSleepTime * rate)
 	}
 	info[0].initInfo("join", failcnt, cnt)
 	info[0].finish()
 
-	time.Sleep(time.Second * rate * 10)
+	time.Sleep(normalSleepTime * rate)
 
 	// fmt.Println("Force some node to quit")
 	// for i := 150; i < maxNodeSize; i++ {
 	// 	nodeGroup[i].ForceQuit()
-	// 	time.Sleep(time.Millisecond * 200)
+	// 	time.Sleep(baseSleepTime * 2)
 	// }
 	// fmt.Println("Finish")
 
@@ -169,7 +176,7 @@ func testWhenStabAndQuit(rate time.Duration) {
 			failcnt++
 		}
 
-		time.Sleep(time.Millisecond * rate)
+		time.Sleep(dataSleepTime2 * rate)
 	}
 	info[1].initInfo("put", failcnt, cnt)
 	info[1].finish()
@@ -183,7 +190,7 @@ func testWhenStabAndQuit(rate time.Duration) {
 		}
 		cnt++
 
-		time.Sleep(time.Millisecond * rate)
+		time.Sleep(dataSleepTime2 * rate)
 	}
 	info[2].initInfo("get", failcnt, cnt)
 	info[2].finish()
@@ -199,11 +206,11 @@ func testWhenStabAndQuit(rate time.Duration) {
 			if !ok || ret != datalocal[rk] {
 				failcnt++
 			}
-			time.Sleep(time.Millisecond * rate * 10)
+			time.Sleep(dataSleepTime2 * 10)
 		}
 
 		nodeGroup[i].Quit()
-		time.Sleep(time.Millisecond * 100 * rate)
+		time.Sleep(normalSleepTime * rate)
 	}
 	info[3].initInfo("get while quit", failcnt, cnt)
 	info[3].finish()
@@ -245,7 +252,7 @@ func testRandom(rate time.Duration) {
 
 		go nodeGroup[i].Run()
 	}
-	time.Sleep(time.Millisecond * rate * 100)
+	time.Sleep(normalSleepTime * rate)
 
 	nodeGroup[0].Create()
 
@@ -262,18 +269,10 @@ func testRandom(rate time.Duration) {
 			if !nodeGroup[nodecnt].Join(addr) {
 				failcnt1++
 			}
-			time.Sleep(time.Millisecond * 200 * rate)
+			time.Sleep(baseSleepTime * 2 * rate)
 			nodecnt++
 		}
 	}()
-
-	//time.Sleep(time.Second * rate * 10)
-	// fmt.Println("Force some node to quit")
-	// for i := 150; i < maxNodeSize; i++ {
-	// 	nodeGroup[i].ForceQuit()
-	// 	time.Sleep(time.Millisecond * 200)
-	// }
-	// fmt.Println("Finish")
 
 	failcnt2 := 0
 	quitcnt := 1
@@ -295,7 +294,7 @@ func testRandom(rate time.Duration) {
 				failcnt2++
 			}
 			datacnt++
-			time.Sleep(time.Millisecond * 2 * rate)
+			time.Sleep(dataSleepTime2 * rate)
 		}
 	}()
 
@@ -316,7 +315,7 @@ func testRandom(rate time.Duration) {
 					failcnt3++
 				}
 				cnt3++
-				time.Sleep(time.Millisecond * rate)
+				time.Sleep(dataSleepTime2 * rate)
 			}
 			datamux.Unlock()
 			time.Sleep(1 * time.Second)
@@ -340,7 +339,7 @@ func testRandom(rate time.Duration) {
 						//fmt.Println("get fail:", rk, " => ", datalocal[rk], " from ", tmp)
 						failcnt4++
 					}
-					time.Sleep(time.Millisecond * rate * 100)
+					time.Sleep(normalSleepTime * rate)
 				}
 
 				nodeGroup[quitcnt].Quit()

@@ -623,7 +623,7 @@ func (pos *Node) FixList() error {
 	}
 	if p == -1 {
 		pos.lock.Unlock()
-		fmt.Print("Pos = ", pos.Ip, " sucList = ")
+		// fmt.Print("Pos = ", pos.Ip, " sucList = ")
 		for i := 0; i < SucListLen; i++ {
 			fmt.Print(pos.sucList[i].Ip, " ")
 		}
@@ -636,7 +636,7 @@ func (pos *Node) FixList() error {
 		client := Dial(pos.sucList[p].Ip)
 		if client == nil {
 			pos.lock.Unlock()
-			fmt.Print("Error(1):: Dial Connect Failure.(637)\n")
+			fmt.Print("Error(1):: Dial Connect Failure.(639)\n")
 			return errors.New("error(1):: Dial Connect Failure")
 		}
 
@@ -665,7 +665,7 @@ func (pos *Node) insertSuc(newSuc Edge) error {
 		pos.lock.Unlock()
 		return nil
 	}
-	fmt.Print("pos = ", pos.Ip, " suc = ", newSuc.Ip, "\n")
+	// fmt.Print("pos = ", pos.Ip, " suc = ", newSuc.Ip, "\n")
 	for i := SucListLen - 1; i > 0; i-- {
 		pos.sucList[i] = pos.sucList[i-1]
 	}
@@ -675,7 +675,7 @@ func (pos *Node) insertSuc(newSuc Edge) error {
 	// for force quit
 	client := Dial(newSuc.Ip)
 	if client == nil {
-		fmt.Print("Error(1):: Dial Connect Failure.(637)\n")
+		fmt.Print("Error(1):: Dial Connect Failure.(678)\n")
 		return errors.New("error(1):: Dial Connect Failure")
 	}
 
