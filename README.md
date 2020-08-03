@@ -39,7 +39,29 @@ Error(3): Function Error(Deal to Network Error)
 
 ### ChangeLog
 
-这是个栈。
+#### 2020.08.03
+
+通过Basic测试
+
+#### 2020.07.30
+
+通过混合测试
+
+#### 2020.07.29
+
+实现Forcequit
+
+#### 2020.07.28
+
+实现Quit
+
+#### 2020.07.27
+
+无Quit/Forcequit实现
+
+#### 2020.07.23
+
+实现RPC Call
 
 #### 2020.07.22
 
