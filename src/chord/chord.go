@@ -308,15 +308,18 @@ func (pos *Node) CreateNetwork() error {
 
 func (pos *Node) MoveDataToPre(pr *big.Int, ret *map[string]string) error {
 	pos.sto.lock.Lock()
+	pos.dataPre.lock.Lock()
 	for k, v := range pos.sto.data {
-		if hashStr(k).Cmp(pr) <= 0 {
+		if !inRange(pr, &pos.id, hashStr(k)) {
 			(*ret)[k] = v
 		}
 	}
 	for k := range *ret {
+		pos.dataPre.data[k] = pos.sto.data[k]
 		delete(pos.sto.data, k)
 	}
 	pos.sto.lock.Unlock()
+	pos.dataPre.lock.Unlock()
 	return nil
 }
 
@@ -362,6 +365,11 @@ func (pos *Node) JoinNetwork(ip string) error {
 		pos.finger[i] = temp
 		pos.lock.Unlock()
 	}
+
+	pos.lock.Lock()
+	_ = client.Close()
+	client = Dial(pos.sucList[0].Ip)
+	pos.lock.Unlock()
 
 	pos.sto.lock.Lock()
 	err = client.Call("RPCNode.MoveDataToPre", &pos.id, &pos.sto.data)
