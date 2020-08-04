@@ -22,11 +22,11 @@ func (pos *DataPool) hasKey(key string) bool {
 	return ok
 }
 
-func (pos *DataPool) query(key string) (string, bool) {
+func (pos *DataPool) query(key string) string {
 	pos.lock.Lock()
-	ret, ok := pos.data[key]
+	ret := pos.data[key]
 	pos.lock.Unlock()
-	return ret, ok
+	return ret
 }
 
 func (pos *DataPool) insert(dat KV) {
@@ -84,4 +84,8 @@ func (pos *Bucket) push(x Edge) {
 
 type Node struct {
 	route [BitLen]Bucket
+	data  DataPool
+
+	Ip string
+	Id big.Int
 }
