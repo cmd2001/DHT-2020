@@ -15,8 +15,8 @@ const (
 )
 
 func advancedTest() {
-	testWhenStabAndQuit(4)
-	testWhenStabAndQuit(2)
+	// testWhenStabAndQuit(4)
+	// testWhenStabAndQuit(2)
 
 	testRandom(2)
 }
@@ -241,7 +241,9 @@ func testRandom(rate time.Duration) {
 	keyArray = new([maxData]string)
 	datalocal = make(map[string]string)
 	datamux := sync.Mutex{}
+
 	maxNodeSize = 120
+	maxDataSize = 1200
 
 	localIP = getIP()
 
@@ -261,7 +263,7 @@ func testRandom(rate time.Duration) {
 	running := true
 	nodecnt := 1
 	go func() {
-		// fmt.Println("start join ")
+		fmt.Println("start join ")
 		for running && nodecnt < maxNodeSize {
 			curport := config.Port
 			addr := toAddr(localIP, curport)
@@ -280,7 +282,7 @@ func testRandom(rate time.Duration) {
 	datacnt := 0
 	time.Sleep(5 * time.Second)
 	go func() {
-		//fmt.Println("start put")
+		fmt.Println("start put")
 		for running && datacnt < maxDataSize {
 
 			k := randString(50)
@@ -301,7 +303,7 @@ func testRandom(rate time.Duration) {
 	failcnt3 := 0
 	cnt3 := 0
 	go func() {
-		// fmt.Println("start get")
+		fmt.Println("start get")
 		for running {
 			datamux.Lock()
 			for k, v := range datalocal {
@@ -327,7 +329,7 @@ func testRandom(rate time.Duration) {
 	time.Sleep(5 * time.Second)
 	done := make(chan bool)
 	go func() {
-		// fmt.Println("start quit")
+		fmt.Println("start quit")
 		for running {
 			if quitcnt < nodecnt-1 {
 				for j := 1; j <= 10; j++ {
@@ -364,5 +366,4 @@ func testRandom(rate time.Duration) {
 	info[2].finish()
 	info[3].initInfo("get while quit", failcnt4, cnt4)
 	info[3].finish()
-
 }

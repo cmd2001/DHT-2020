@@ -23,7 +23,7 @@ DHT Project of PPCA 2020
 
 - [x] Basic Test
 
-- [ ] Advanced Test
+- [ ] Advanced Test (With Longer Sleeptime)
 
 - [ ] Second Protocol
 
