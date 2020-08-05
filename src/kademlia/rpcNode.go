@@ -5,6 +5,8 @@ import (
 	"net"
 )
 
+// we assert the network is safe, so do not return ip and id.
+
 type RPCNode struct {
 	Data *Node
 
@@ -16,7 +18,7 @@ type PingArgument struct {
 }
 
 func (pos *RPCNode) Ping(arg *PingArgument, _ *int) error {
-	pos.Data.route[DiffBit(&pos.Data.Id, &arg.Initiator.Id)].push(arg.Initiator)
+	pos.Data.pushNode(arg.Initiator)
 	return nil
 }
 
@@ -27,7 +29,7 @@ type StoreArgument struct {
 
 func (pos *RPCNode) Store(arg *StoreArgument, _ *int) error {
 	pos.Data.data.insert(arg.Data)
-	pos.Data.route[DiffBit(&pos.Data.Id, &arg.Initiator.Id)].push(arg.Initiator)
+	pos.Data.pushNode(arg.Initiator)
 	return nil
 }
 
@@ -37,8 +39,8 @@ type FindNodeArgument struct {
 }
 
 func (pos *RPCNode) FindNode(arg *FindNodeArgument, ret *RetBucket) error {
-	*ret = pos.Data.FindNode(&arg.Id)
-	pos.Data.route[DiffBit(&pos.Data.Id, &arg.Initiator.Id)].push(arg.Initiator)
+	*ret = pos.Data.FindNode(&arg.Id, RetBucketSize)
+	pos.Data.pushNode(arg.Initiator)
 	return nil
 }
 
@@ -50,6 +52,6 @@ type FindValueArgument struct {
 
 func (pos *RPCNode) FindValue(arg *FindValueArgument, ret *RetBucketValue) error {
 	*ret = pos.Data.FindValue(&arg.Id, arg.Key)
-	pos.Data.route[DiffBit(&pos.Data.Id, &arg.Initiator.Id)].push(arg.Initiator)
+	pos.Data.pushNode(arg.Initiator)
 	return nil
 }

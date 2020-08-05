@@ -1,6 +1,7 @@
 package kademlia
 
 import (
+	"fmt"
 	"math/big"
 	"sync"
 )
@@ -10,7 +11,7 @@ type KV struct {
 	Value string
 }
 
-type DataPool struct {
+type DataPool struct { // the lifetime of data is INFINITY.
 	data map[string]string
 	lock sync.Mutex
 }
@@ -45,7 +46,7 @@ type Bucket struct {
 	lock sync.Mutex
 }
 
-func (pos *Bucket) push(x Edge) {
+func (pos *Bucket) push(x Edge, cur Edge) bool {
 	pos.lock.Lock()
 	foundPos := -1
 	for i := 0; i < BucketSize; i++ {
@@ -64,8 +65,10 @@ func (pos *Bucket) push(x Edge) {
 				break
 			}
 		}
+		pos.lock.Unlock()
+		return false
 	} else {
-		if Ping(pos.Data[0].Ip) {
+		if Ping(cur, pos.Data[0].Ip) {
 			x = pos.Data[0]
 		}
 		for i := 0; i < BucketSize-1; i++ {
@@ -78,8 +81,9 @@ func (pos *Bucket) push(x Edge) {
 				break
 			}
 		}
+		pos.lock.Unlock()
+		return true
 	}
-	pos.lock.Unlock()
 }
 
 type Node struct {
@@ -88,4 +92,128 @@ type Node struct {
 
 	Ip string
 	Id big.Int
+
+	On bool
+}
+
+func (pos *Node) pushNode(edge Edge) {
+	if pos.route[DiffBit(&pos.Id, &edge.Id)].push(edge, Edge{pos.Ip, pos.Id}) {
+		pos.data.lock.Lock()
+		dat := pos.data.data
+		pos.data.lock.Unlock()
+		for key, value := range dat {
+			h := hashStr(key)
+			if DiffBit(h, &pos.Id) > DiffBit(h, &edge.Id) {
+				client := Dial(edge.Ip)
+				if client == nil {
+					fmt.Println("Error(1):: Dial Connect Failure.")
+					continue
+				}
+				err := client.Call("RPCNode.Store", &StoreArgument{KV{key, value}, Edge{pos.Ip, pos.Id}}, nil)
+				_ = client.Close()
+				if err != nil {
+					fmt.Println("Error(2):: RPC Calling Failure.")
+					fmt.Println(err)
+				}
+			}
+		}
+	}
+}
+
+func (pos *Node) NearestNode(id *big.Int) RetBucket { // alpha = 3, however, the RPC call is synchronous.
+	ret := pos.FindNode(id, RetBucketSize)
+	vis := make(map[string]struct{})
+	for true {
+		flag := false
+		for i := 0; i < BucketSize; i++ {
+			if _, ok := vis[ret.Data[i].Ip]; ret.Data[i].Ip != " " && !ok {
+				vis[ret.Data[i].Ip] = struct{}{}
+
+				client := Dial(ret.Data[i].Ip)
+				if client == nil {
+					fmt.Println("Error(1):: Dial Connect Failure.")
+				} else {
+					var temp RetBucket
+					err := client.Call("RPCNode.FindNode", &FindNodeArgument{*id, Edge{pos.Ip, pos.Id}}, &temp)
+					_ = client.Close()
+
+					if err != nil {
+						fmt.Println("Error(2):: RPC Calling Failure.")
+						fmt.Println(err)
+					} else {
+						ret = Merge(&ret, &temp, id)
+					}
+				}
+				flag = true
+				break
+			}
+		}
+		if !flag {
+			break
+		}
+	}
+	return ret
+}
+
+func (pos *Node) Store(kv KV) {
+	nodes := pos.NearestNode(hashStr(kv.Key))
+	for i := 0; i < BucketSize; i++ {
+		if nodes.Data[i].Ip != "" {
+			client := Dial(nodes.Data[i].Ip)
+
+			if client == nil {
+				fmt.Println("Error(1):: Dial Connect Failure.")
+				continue
+			}
+
+			err := client.Call("RPCNode.Store", &StoreArgument{kv, Edge{pos.Ip, pos.Id}}, nil)
+			_ = client.Close()
+
+			if err != nil {
+				fmt.Println("Error(2):: RPC Calling Failure.")
+				fmt.Println(err)
+			}
+		}
+	}
+}
+
+func (pos *Node) Query(key string) (bool, string) {
+	id := hashStr(key)
+	ret := pos.FindNode(id, RetBucketSize)
+	vis := make(map[string]struct{})
+	for true {
+		flag := false
+		for i := 0; i < BucketSize; i++ {
+			if _, ok := vis[ret.Data[i].Ip]; ret.Data[i].Ip != " " && !ok {
+				vis[ret.Data[i].Ip] = struct{}{}
+
+				client := Dial(ret.Data[i].Ip)
+				if client == nil {
+					fmt.Println("Error(1):: Dial Connect Failure.")
+				} else {
+					var temp RetBucketValue
+					err := client.Call("RPCNode.FindValue", &FindValueArgument{key, *id, Edge{pos.Ip, pos.Id}}, &temp)
+					_ = client.Close()
+
+					if err != nil {
+						fmt.Println("Error(2):: RPC Calling Failure.")
+						fmt.Println(err)
+					} else {
+						if temp.Flag {
+							pos.data.insert(KV{key, temp.Val})
+							return true, temp.Val
+						} else {
+							ret = Merge(&ret, &temp.Bucket, id)
+						}
+					}
+				}
+				flag = true
+				break
+			}
+		}
+		if !flag {
+			break
+		}
+	}
+	return false, ""
 }

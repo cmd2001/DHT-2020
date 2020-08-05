@@ -8,16 +8,15 @@ import (
 )
 
 const (
-	tryTime    = 5
-	waitTime   = time.Millisecond * 50
-	BitLen     = 160
-	BucketSize = 20
-	CacheSize  = 100
+	tryTime       = 5
+	waitTime      = time.Millisecond * 50
+	BitLen        = 160
+	BucketSize    = 20
+	RetBucketSize = 3
 )
 
 var (
 	two = big.NewInt(2)
-	mod = new(big.Int).Exp(two, big.NewInt(160), nil)
 )
 
 func hashStr(s string) *big.Int {
@@ -40,7 +39,7 @@ func Dial(ip string) *rpc.Client {
 	return nil
 }
 
-func Ping(ip string) bool {
+func Ping(Initiator Edge, ip string) bool {
 	var err error
 	var client *rpc.Client
 	for i := 1; i <= tryTime; i++ {
@@ -48,11 +47,12 @@ func Ping(ip string) bool {
 		if err != nil {
 			time.Sleep(waitTime)
 		} else {
+			_ = client.Call("RPCNode.Ping", &Initiator, nil)
 			_ = client.Close()
-			return false
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 func Xor(a *big.Int, b *big.Int) *big.Int {
@@ -78,4 +78,33 @@ func HighBit(x *big.Int) int {
 
 func DiffBit(x *big.Int, y *big.Int) int {
 	return HighBit(Xor(x, y))
+}
+
+func Merge(a *RetBucket, b *RetBucket, id *big.Int) RetBucket {
+	var ret RetBucket
+	pos := 0
+	pa := 0
+	pb := 0
+	for pos < BucketSize && pa < BucketSize && pb < BucketSize {
+		if a.Data[pa].Ip == "" && b.Data[pb].Ip == "" {
+			break
+		} else if b.Data[pb].Ip == "" {
+			ret.Data[pos] = a.Data[pa]
+			pos++
+			pa++
+		} else if a.Data[pa].Ip == "" {
+			ret.Data[pos] = b.Data[pb]
+			pos++
+			pb++
+		} else if DiffBit(&a.Data[pa].Id, id) < DiffBit(&b.Data[pa].Id, id) {
+			ret.Data[pos] = a.Data[pa]
+			pos++
+			pa++
+		} else {
+			ret.Data[pos] = b.Data[pb]
+			pos++
+			pb++
+		}
+	}
+	return ret
 }
