@@ -62,18 +62,7 @@ func Xor(a *big.Int, b *big.Int) *big.Int {
 }
 
 func HighBit(x *big.Int) int {
-	temp := big.NewInt(int64(1))
-	Zero := big.NewInt(int64(0))
-	cmp := new(big.Int)
-	ret := -1
-	for i := 0; i < BitLen; i++ {
-		cmp.Add(temp, x)
-		if cmp.Cmp(Zero) > 0 {
-			ret = i
-		}
-		temp.Mul(temp, two)
-	}
-	return ret
+	return x.BitLen() - 1
 }
 
 func DiffBit(x *big.Int, y *big.Int) int {

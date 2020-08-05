@@ -30,13 +30,34 @@ type RetBucketValue struct {
 	Flag   bool
 }
 
+func max(a int, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 func (pos *Node) FindNode(id *big.Int, tarSiz int) RetBucket {
 	usedSize := 0
 	var ret RetBucket
-	for i := DiffBit(id, &pos.Id); i < BitLen && usedSize < tarSiz; i++ {
+	init := max(DiffBit(id, &pos.Id), 0)
+	for i := init; i < BitLen && usedSize < tarSiz; i++ {
+		pos.route[i].lock.Lock()
 		for j := 0; j < BucketSize && usedSize < tarSiz; j++ {
-			usedSize += ret.push(pos.route[i].Data[j])
+			if pos.route[i].Data[j].Ip != "" && pos.Ping(pos.route[i].Data[j].Ip) {
+				usedSize += ret.push(pos.route[i].Data[j])
+			}
 		}
+		pos.route[i].lock.Unlock()
+	}
+	for i := init - 1; i > 0 && usedSize < tarSiz; i-- {
+		pos.route[i].lock.Lock()
+		for j := 0; j < BucketSize && usedSize < tarSiz; j++ {
+			if pos.route[i].Data[j].Ip != "" && pos.Ping(pos.route[i].Data[j].Ip) {
+				usedSize += ret.push(pos.route[i].Data[j])
+			}
+		}
+		pos.route[i].lock.Unlock()
 	}
 	return ret
 }
@@ -56,6 +77,7 @@ func (pos *Node) FindValue(id *big.Int, Key string) RetBucketValue {
 func (pos *Node) Init(ip string) {
 	pos.Ip = ip
 	pos.Id = *hashStr(ip) // generate id in a "random" way initialized by ip
+	pos.data.data = make(map[string]string)
 }
 
 func (pos *Node) Join(ip string) error {
@@ -68,7 +90,7 @@ func (pos *Node) Join(ip string) error {
 	nodes := pos.NearestNode(&pos.Id)
 
 	for i := 0; i < BucketSize; i++ {
-		if nodes.Data[i].Ip != "" {
+		if nodes.Data[i].Ip != "" && nodes.Data[i].Ip != pos.Ip {
 			pos.route[DiffBit(&pos.Id, &nodes.Data[i].Id)].push(nodes.Data[i], Edge{pos.Ip, pos.Id})
 		}
 	}

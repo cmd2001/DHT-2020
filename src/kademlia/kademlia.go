@@ -68,8 +68,10 @@ func (pos *Bucket) push(x Edge, cur Edge) bool {
 		pos.lock.Unlock()
 		return false
 	} else {
+		ret := true
 		if Ping(cur, pos.Data[0].Ip) {
 			x = pos.Data[0]
+			ret = false
 		}
 		for i := 0; i < BucketSize-1; i++ {
 			pos.Data[i] = pos.Data[i+1]
@@ -82,7 +84,7 @@ func (pos *Bucket) push(x Edge, cur Edge) bool {
 			}
 		}
 		pos.lock.Unlock()
-		return true
+		return ret
 	}
 }
 
@@ -97,6 +99,9 @@ type Node struct {
 }
 
 func (pos *Node) pushNode(edge Edge) {
+	if pos.Ip == edge.Ip {
+		return
+	}
 	if pos.route[DiffBit(&pos.Id, &edge.Id)].push(edge, Edge{pos.Ip, pos.Id}) {
 		pos.data.lock.Lock()
 		dat := pos.data.data
@@ -126,14 +131,15 @@ func (pos *Node) NearestNode(id *big.Int) RetBucket { // alpha = 3, however, the
 	for true {
 		flag := false
 		for i := 0; i < BucketSize; i++ {
-			if _, ok := vis[ret.Data[i].Ip]; ret.Data[i].Ip != " " && !ok {
+			if _, ok := vis[ret.Data[i].Ip]; ret.Data[i].Ip != "" && !ok {
 				vis[ret.Data[i].Ip] = struct{}{}
-
 				client := Dial(ret.Data[i].Ip)
 				if client == nil {
 					fmt.Println("Error(1):: Dial Connect Failure.")
+					fmt.Println("ret.ip = ", ret.Data[i].Ip)
 				} else {
 					var temp RetBucket
+
 					err := client.Call("RPCNode.FindNode", &FindNodeArgument{*id, Edge{pos.Ip, pos.Id}}, &temp)
 					_ = client.Close()
 
@@ -179,7 +185,7 @@ func (pos *Node) Store(kv KV) {
 
 func (pos *Node) Query(key string) (bool, string) {
 	id := hashStr(key)
-	ret := pos.FindNode(id, RetBucketSize)
+	ret := pos.FindNode(id, RetBucketSize) // use BucketSize instead of RetBucketSize for higher success rate
 	vis := make(map[string]struct{})
 	for true {
 		flag := false

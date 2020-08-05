@@ -20,7 +20,6 @@ func NewNode(port int) dhtNode {
 		fmt.Print("Error(4):: Failed to Register.")
 		panic(nil)
 	}
-
 	return &ret
 }
 

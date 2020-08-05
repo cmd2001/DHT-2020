@@ -4,28 +4,11 @@ import (
 	"fmt"
 	"math/rand"
 	"runtime"
+	"testing"
 	"time"
 )
 
-func randStr() string {
-	var ret string
-	for i := 0; i <= 5; i++ {
-		x := rand.Int() % 26
-		ret = ret + string(x+'a')
-	}
-	return ret
-}
-
-const (
-	testGroup  = 1
-	nodeLen    = 10
-	quitSize   = 1
-	insertSize = 1000
-	randomSize = 512
-	sleepTime  = time.Second * 6 / 10
-)
-
-func main() {
+func TestSpeed(t *testing.T) {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // use all CPUs
 	seed := time.Now().UnixNano()
 	fmt.Print("Random Seed = ", seed, "\n")
@@ -63,6 +46,7 @@ func main() {
 				id = rand.Int() % nodeLen
 				_, ok = deleted[id]
 			}
+
 			nodes[id].Put(str, str)
 
 			id = rand.Int() % nodeLen
