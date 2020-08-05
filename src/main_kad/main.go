@@ -17,9 +17,9 @@ func randStr() string {
 }
 
 const (
-	testGroup  = 1
-	nodeLen    = 10
-	quitSize   = 1
+	testGroup  = 5
+	nodeLen    = 50
+	quitSize   = 2
 	insertSize = 1000
 	randomSize = 512
 	sleepTime  = time.Second * 6 / 10
@@ -27,7 +27,8 @@ const (
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // use all CPUs
-	seed := time.Now().UnixNano()
+	// seed := time.Now().UnixNano()
+	seed := int64(1596632838873651343)
 	fmt.Print("Random Seed = ", seed, "\n")
 	rand.Seed(seed)
 
@@ -39,6 +40,7 @@ func main() {
 	for i := 0; i < nodeLen; i++ {
 		nodes[i] = NewNode(2333 + i)
 		nodes[i].Run()
+		time.Sleep(time.Second / 10)
 	}
 	fmt.Println("Nodes inited")
 	nodes[0].Create()
@@ -95,7 +97,6 @@ func main() {
 				nodes[id].ForceQuit()
 			}
 			deleted[id] = id
-			time.Sleep(sleepTime * 5)
 		}
 
 		fmt.Print("Conducting Random Get Test\n")

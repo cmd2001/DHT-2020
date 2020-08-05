@@ -8,11 +8,12 @@ import (
 )
 
 const (
-	tryTime       = 5
-	waitTime      = time.Millisecond * 50
-	BitLen        = 160
-	BucketSize    = 20
-	RetBucketSize = 3
+	tryTime          = 5
+	waitTime         = time.Millisecond * 50
+	BitLen           = 160
+	BucketSize       = 20
+	RetBucketSize    = 3
+	maintainDuration = time.Second
 )
 
 var (
@@ -69,12 +70,12 @@ func DiffBit(x *big.Int, y *big.Int) int {
 	return HighBit(Xor(x, y))
 }
 
-func Merge(a *RetBucket, b *RetBucket, id *big.Int) RetBucket {
+func Merge(a *RetBucket, b *RetBucketSmall, id *big.Int) RetBucket {
 	var ret RetBucket
 	pos := 0
 	pa := 0
 	pb := 0
-	for pos < BucketSize && pa < BucketSize && pb < BucketSize {
+	for pos < BucketSize && pa < BucketSize && pb < RetBucketSize {
 		if a.Data[pa].Ip == "" && b.Data[pb].Ip == "" {
 			break
 		} else if b.Data[pb].Ip == "" {
@@ -85,7 +86,7 @@ func Merge(a *RetBucket, b *RetBucket, id *big.Int) RetBucket {
 			ret.Data[pos] = b.Data[pb]
 			pos++
 			pb++
-		} else if DiffBit(&a.Data[pa].Id, id) < DiffBit(&b.Data[pa].Id, id) {
+		} else if DiffBit(&a.Data[pa].Id, id) < DiffBit(&b.Data[pb].Id, id) {
 			ret.Data[pos] = a.Data[pa]
 			pos++
 			pa++
@@ -94,6 +95,16 @@ func Merge(a *RetBucket, b *RetBucket, id *big.Int) RetBucket {
 			pos++
 			pb++
 		}
+	}
+	for pos < BucketSize && pa < BucketSize && a.Data[pa].Ip != "" {
+		ret.Data[pos] = a.Data[pa]
+		pos++
+		pa++
+	}
+	for pos < BucketSize && pb < RetBucketSize && b.Data[pb].Ip != "" {
+		ret.Data[pos] = b.Data[pb]
+		pos++
+		pb++
 	}
 	return ret
 }

@@ -33,13 +33,19 @@ func (pos *RPCNode) Store(arg *StoreArgument, _ *int) error {
 	return nil
 }
 
+func (pos *RPCNode) RePublish(arg *StoreArgument, _ *int) error {
+	pos.Data.data.rePublish(arg.Data)
+	pos.Data.pushNode(arg.Initiator)
+	return nil
+}
+
 type FindNodeArgument struct {
 	Id        big.Int
 	Initiator Edge
 }
 
-func (pos *RPCNode) FindNode(arg *FindNodeArgument, ret *RetBucket) error {
-	*ret = pos.Data.FindNode(&arg.Id, RetBucketSize)
+func (pos *RPCNode) FindNode(arg *FindNodeArgument, ret *RetBucketSmall) error {
+	*ret = pos.Data.FindNode(&arg.Id)
 	pos.Data.pushNode(arg.Initiator)
 	return nil
 }

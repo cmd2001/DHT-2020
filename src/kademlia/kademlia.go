@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
+	"time"
 )
 
 type KV struct {
@@ -13,6 +14,7 @@ type KV struct {
 
 type DataPool struct { // the lifetime of data is INFINITY.
 	data map[string]string
+	rem  map[string]int
 	lock sync.Mutex
 }
 
@@ -33,6 +35,14 @@ func (pos *DataPool) query(key string) string {
 func (pos *DataPool) insert(dat KV) {
 	pos.lock.Lock()
 	pos.data[dat.Key] = dat.Value
+	pos.rem[dat.Key] = 3 // instead of 1 hour, we set it to 3 maintain duration
+	pos.lock.Unlock()
+}
+
+func (pos *DataPool) rePublish(dat KV) {
+	pos.lock.Lock()
+	pos.data[dat.Key] = dat.Value
+	pos.rem[dat.Key] = 5
 	pos.lock.Unlock()
 }
 
@@ -98,36 +108,45 @@ type Node struct {
 	On bool
 }
 
-func (pos *Node) pushNode(edge Edge) {
-	if pos.Ip == edge.Ip {
-		return
-	}
-	if pos.route[DiffBit(&pos.Id, &edge.Id)].push(edge, Edge{pos.Ip, pos.Id}) {
-		pos.data.lock.Lock()
-		dat := pos.data.data
-		pos.data.lock.Unlock()
-		for key, value := range dat {
-			h := hashStr(key)
-			if DiffBit(h, &pos.Id) > DiffBit(h, &edge.Id) {
-				client := Dial(edge.Ip)
-				if client == nil {
-					fmt.Println("Error(1):: Dial Connect Failure.")
-					continue
-				}
-				err := client.Call("RPCNode.Store", &StoreArgument{KV{key, value}, Edge{pos.Ip, pos.Id}}, nil)
-				_ = client.Close()
-				if err != nil {
-					fmt.Println("Error(2):: RPC Calling Failure.")
-					fmt.Println(err)
-				}
+func (pos *Node) moveData(edge Edge) {
+	pos.data.lock.Lock()
+	dat := pos.data.data
+	pos.data.lock.Unlock()
+	for key, value := range dat {
+		h := hashStr(key)
+		if DiffBit(h, &pos.Id) > DiffBit(h, &edge.Id) {
+			client := Dial(edge.Ip)
+			if client == nil {
+				fmt.Println("Error(1):: Dial Connect Failure.")
+				continue
+			}
+			err := client.Call("RPCNode.Store", &StoreArgument{KV{key, value}, Edge{pos.Ip, pos.Id}}, nil)
+			_ = client.Close()
+			if err != nil {
+				fmt.Println("Error(2):: RPC Calling Failure.")
+				fmt.Println(err)
 			}
 		}
 	}
 }
 
+func (pos *Node) pushNode(edge Edge) {
+	if pos.Ip == edge.Ip {
+		return
+	}
+	if pos.route[DiffBit(&pos.Id, &edge.Id)].push(edge, Edge{pos.Ip, pos.Id}) {
+		pos.moveData(edge)
+	}
+}
+
 func (pos *Node) NearestNode(id *big.Int) RetBucket { // alpha = 3, however, the RPC call is synchronous.
-	ret := pos.FindNode(id, RetBucketSize)
+	var ret RetBucket
+	temp := pos.FindNode(id)
+	for i := 0; i < RetBucketSize; i++ {
+		ret.Data[i] = temp.Data[i]
+	}
 	vis := make(map[string]struct{})
+
 	for true {
 		flag := false
 		for i := 0; i < BucketSize; i++ {
@@ -138,7 +157,7 @@ func (pos *Node) NearestNode(id *big.Int) RetBucket { // alpha = 3, however, the
 					fmt.Println("Error(1):: Dial Connect Failure.")
 					fmt.Println("ret.ip = ", ret.Data[i].Ip)
 				} else {
-					var temp RetBucket
+					var temp RetBucketSmall
 
 					err := client.Call("RPCNode.FindNode", &FindNodeArgument{*id, Edge{pos.Ip, pos.Id}}, &temp)
 					_ = client.Close()
@@ -185,8 +204,13 @@ func (pos *Node) Store(kv KV) {
 
 func (pos *Node) Query(key string) (bool, string) {
 	id := hashStr(key)
-	ret := pos.FindNode(id, RetBucketSize) // use BucketSize instead of RetBucketSize for higher success rate
+	var ret RetBucket
+	temp := pos.FindNode(id)
+	for i := 0; i < RetBucketSize; i++ {
+		ret.Data[i] = temp.Data[i]
+	}
 	vis := make(map[string]struct{})
+
 	for true {
 		flag := false
 		for i := 0; i < BucketSize; i++ {
@@ -207,6 +231,21 @@ func (pos *Node) Query(key string) (bool, string) {
 					} else {
 						if temp.Flag {
 							pos.data.insert(KV{key, temp.Val})
+							for j := 0; j < i; j++ { // cache
+								if ret.Data[j].Ip != "" && pos.Ping(ret.Data[j].Ip) {
+									client2 := Dial(ret.Data[j].Ip)
+									if client2 == nil {
+										fmt.Println("Error(1):: Dial Connect Failure.")
+									} else {
+										err2 := client2.Call("RPCNode.Store", &StoreArgument{KV{key, temp.Val}, Edge{pos.Ip, pos.Id}}, nil)
+										_ = client2.Close()
+										if err2 != nil {
+											fmt.Println("Error(2):: RPC Calling Failure.")
+											fmt.Println(err)
+										}
+									}
+								}
+							}
 							return true, temp.Val
 						} else {
 							ret = Merge(&ret, &temp.Bucket, id)
@@ -222,4 +261,60 @@ func (pos *Node) Query(key string) (bool, string) {
 		}
 	}
 	return false, ""
+}
+
+func (pos *Node) Maintain() {
+	for pos.On {
+		// deep copy maps
+		pos.data.lock.Lock()
+		rem := make(map[string]int)
+		for key, value := range pos.data.rem {
+			rem[key] = value
+		}
+
+		dat := make(map[string]string)
+		for key, value := range pos.data.data {
+			dat[key] = value
+
+		}
+		pos.data.lock.Unlock()
+
+		for key, value := range rem {
+			if value == 1 {
+				nodes := pos.NearestNode(hashStr(key))
+				for j := 0; j < BucketSize; j++ {
+					if nodes.Data[j].Ip != "" && nodes.Data[j].Ip != pos.Ip && pos.Ping(nodes.Data[j].Ip) {
+						client := Dial(nodes.Data[j].Ip)
+						if client == nil {
+							fmt.Println("Error(1):: Dial Connect Failure.")
+							continue
+						}
+						err := client.Call("RPCNode.RePublish", &StoreArgument{KV{key, dat[key]}, Edge{pos.Ip, pos.Id}}, nil)
+						_ = client.Close()
+						if err != nil {
+							fmt.Println("Error(2):: RPC Calling Failure.")
+							fmt.Println(err)
+						}
+					}
+				}
+			}
+		}
+
+		pos.data.lock.Lock()
+		nv := make(map[string]int)
+		for key, value := range rem {
+			if value != 1 {
+				nv[key] = max(value-1, pos.data.rem[key])
+			} else {
+				nv[key] = 5
+			}
+		}
+		for key, value := range nv {
+			pos.data.rem[key] = value
+		}
+
+		pos.data.lock.Unlock()
+
+		time.Sleep(maintainDuration)
+	}
 }

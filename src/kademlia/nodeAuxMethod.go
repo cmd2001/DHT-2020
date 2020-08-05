@@ -12,6 +12,22 @@ type RetBucket struct {
 	Data [BucketSize]Edge
 }
 
+type RetBucketSmall struct {
+	Data [RetBucketSize]Edge
+}
+
+func (pos *RetBucketSmall) push(x Edge) int {
+	for i := 0; i < BucketSize; i++ {
+		if pos.Data[i].Ip == x.Ip {
+			return 0
+		} else if pos.Data[i].Ip == "" {
+			pos.Data[i] = x
+			return 1
+		}
+	}
+	return 0
+}
+
 func (pos *RetBucket) push(x Edge) int {
 	for i := 0; i < BucketSize; i++ {
 		if pos.Data[i].Ip == x.Ip {
@@ -25,7 +41,7 @@ func (pos *RetBucket) push(x Edge) int {
 }
 
 type RetBucketValue struct {
-	Bucket RetBucket
+	Bucket RetBucketSmall
 	Val    string
 	Flag   bool
 }
@@ -37,22 +53,22 @@ func max(a int, b int) int {
 	return b
 }
 
-func (pos *Node) FindNode(id *big.Int, tarSiz int) RetBucket {
+func (pos *Node) FindNode(id *big.Int) RetBucketSmall {
 	usedSize := 0
-	var ret RetBucket
+	var ret RetBucketSmall
 	init := max(DiffBit(id, &pos.Id), 0)
-	for i := init; i < BitLen && usedSize < tarSiz; i++ {
+	for i := init; i < BitLen && usedSize < RetBucketSize; i++ {
 		pos.route[i].lock.Lock()
-		for j := 0; j < BucketSize && usedSize < tarSiz; j++ {
+		for j := 0; j < BucketSize && usedSize < RetBucketSize; j++ {
 			if pos.route[i].Data[j].Ip != "" && pos.Ping(pos.route[i].Data[j].Ip) {
 				usedSize += ret.push(pos.route[i].Data[j])
 			}
 		}
 		pos.route[i].lock.Unlock()
 	}
-	for i := init - 1; i > 0 && usedSize < tarSiz; i-- {
+	for i := init - 1; i > 0 && usedSize < RetBucketSize; i-- {
 		pos.route[i].lock.Lock()
-		for j := 0; j < BucketSize && usedSize < tarSiz; j++ {
+		for j := 0; j < BucketSize && usedSize < RetBucketSize; j++ {
 			if pos.route[i].Data[j].Ip != "" && pos.Ping(pos.route[i].Data[j].Ip) {
 				usedSize += ret.push(pos.route[i].Data[j])
 			}
@@ -69,7 +85,7 @@ func (pos *Node) FindValue(id *big.Int, Key string) RetBucketValue {
 		ret.Val = pos.data.query(Key)
 	} else {
 		ret.Flag = false
-		ret.Bucket = pos.FindNode(id, RetBucketSize)
+		ret.Bucket = pos.FindNode(id)
 	}
 	return ret
 }
@@ -78,6 +94,7 @@ func (pos *Node) Init(ip string) {
 	pos.Ip = ip
 	pos.Id = *hashStr(ip) // generate id in a "random" way initialized by ip
 	pos.data.data = make(map[string]string)
+	pos.data.rem = make(map[string]int)
 }
 
 func (pos *Node) Join(ip string) error {

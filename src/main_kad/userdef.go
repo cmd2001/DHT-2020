@@ -39,6 +39,7 @@ func (pos *DHTNode) Run() {
 	pos.Data.Data.On = true
 
 	go pos.Server.Accept(listen)
+	go pos.Data.Data.Maintain()
 }
 
 func (pos *DHTNode) Create() { // nothing to do
