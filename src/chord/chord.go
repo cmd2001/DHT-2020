@@ -11,7 +11,7 @@ import (
 const (
 	Len            = 160
 	SucListLen     = 20
-	maintainPeriod = 80 * time.Millisecond
+	maintainPeriod = 50 * time.Millisecond
 )
 
 type Edge struct {
