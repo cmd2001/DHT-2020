@@ -89,6 +89,6 @@ func (pos *DHTNode) Get(key string) (bool, string) {
 	return err == nil, ret
 }
 
-func (pos *DHTNode) Del(key string) bool {
+func (pos *DHTNode) Delete(key string) bool {
 	return pos.Data.Data.EraseKey(key) == nil
 }
