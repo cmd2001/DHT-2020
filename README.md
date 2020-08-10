@@ -23,9 +23,11 @@ DHT Project of PPCA 2020
 
 - [x] Basic Test
 
-- [ ] Advanced Test (With Longer Sleeptime)
+- [x] Advanced Test (With Longer Sleeptime)
 
-- [ ] Second Protocol
+- [x] Second Protocol
+
+- [x] Document
 
 ## Errors Definition
 
