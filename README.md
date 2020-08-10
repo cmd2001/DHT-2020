@@ -41,6 +41,28 @@ Error(3): Function Error(Deal to Network Error)
 
 ### ChangeLog
 
+#### 2020.08.10
+
+修改README.md
+
+**~~养老~~**
+
+#### 2020.08.08
+
+通过Advance 2020
+
+缩短维护周期，实现0错误率
+
+#### 2020.08.05
+
+Kademlia完成，自行简单测试通过
+
+#### 2020.08.04
+
+测试Advance 2019并失败，错误率0.0127
+
+开始实现Kademlia
+
 #### 2020.08.03
 
 通过Basic测试
